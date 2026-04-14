@@ -1,0 +1,976 @@
+---
+title: "fbat plot data analysis 2025"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Libraries    
+```{r}
+# if !installed.packages("pak") {
+#   install.packages("pak")
+# }
+# pak::pak("https://github.com/paudelsushil/Rfuels")
+
+# Local package is installed from this repo (forestPluse)
+install.packages("forestPluse_2.1.0.tar.gz", repos = NULL, type = "source")
+library(forestPluse)
+
+
+libs <- c("terra", "dplyr", "ggplot2", "readr", "tidyr", "lubridate", "stringr", "sf", "readxl", "here", "Rfuels", "forestPluse")
+
+lapply(libs, library, character.only = TRUE)
+
+
+
+
+```
+
+
+# setup working direcotories and data sources
+```{r}
+# Set base directory
+base_dir <- r"(D:\Clark University\Dominik Kulakowski - Sushil\Datasets\data_Rfabt_repo)"
+
+# Set up analyzed and raw data sources
+analyzed_data_src <- file.path("D:\\Clark University\\Dominik Kulakowski - Sushil\\Repositories\\ForDis\\analyzed_data")
+# Set up raw data source
+raw_data_src <- file.path("D:\\Clark University\\Dominik Kulakowski - Sushil\\Repositories\\ForDis\\raw_data")
+
+
+
+# Set up climate data directories
+tmmxM_dir <- file.path(analyzed_data_src, "climate_data", "tmmx", "monthly")
+tmmnM_dir <- file.path(analyzed_data_src, "climate_data", "tmmn", "monthly")
+prM_dir <- file.path(analyzed_data_src, "climate_data", "pr", "monthly")
+
+pdsiM_dir <- file.path(analyzed_data_src, "climate_data", "pdsi")
+scPdsiM_dir <- file.path(analyzed_data_src, "climate_data", "scpdsi")
+pzIM_dir <- file.path(analyzed_data_src, "climate_data", "pzi")
+
+vpdM_dir <- file.path(analyzed_data_src, "climate_data", "vpd", "monthly")
+petM_dir <- file.path(analyzed_data_src, "climate_data", "pet", "monthly")
+vsM_dir <- file.path(analyzed_data_src, "climate_data", "vs", "monthly")
+rmaxM_dir <- file.path(analyzed_data_src, "climate_data", "rmax", "monthly")
+rminM_dir <- file.path(analyzed_data_src, "climate_data", "rmin", "monthly")
+sradM_dir <- file.path(analyzed_data_src, "climate_data", "srad", "monthly")
+
+# Set up topographic data directory
+topo_data_dir <- file.path(analyzed_data_src, "topographic_data")
+
+```
+
+
+# 1. Complining and compairing coordinates from different gpx waypoints files
+```{r}
+raw_gps_dir <- file.path(base_dir, "GPS_data_backup", "Garmin GPSMAP 65", "Garmin", "GPX")
+
+gpx_files <- list.files(raw_gps_dir, pattern = "^Waypoints_.*[JUN, JUL].*-25.*\\.gpx$", full.names = TRUE)
+gpx_files
+
+
+
+
+gps_coords <- lapply(gpx_files, function(file) {
+      gpx_data <- sf::st_read(file, layer = "waypoints", quiet = TRUE)
+      coords <- sf::st_coordinates(gpx_data)
+      data.frame(
+        file = basename(file),
+        name = gpx_data$name,
+        lon = coords[, "X"],
+        lat = coords[, "Y"],
+        elev = gpx_data$ele,
+        date = gpx_data$time
+      )
+})
+gps_coords_df <- do.call(rbind, gps_coords)
+# View(gps_coords_df)
+
+writexl::write_xlsx(gps_coords_df, file.path(base_dir, "data", "GPS_data_backup", "compiled_gpx_data_2025", "gpx_2025_raw.xlsx"))
+
+plots_measured_2025_sheet <- readxl::read_excel(file.path(base_dir, "data", "plots with GPS Location.xlsx"))
+
+st_write(gps_coords_df, file.path(base_dir, "data", "GPS_data_backup", "compiled_gpx_data_2025", "gpx_2025_raw.kml"), driver = "kml", delete_dsn = TRUE)
+
+st_write(gps_coords_df, file.path(base_dir, "data", "GPS_data_backup", "compiled_gpx_data_2025", "gpx_2025_raw.gpkg"), driver = "GPKG", delete_dsn = TRUE)
+
+```
+
+## Finalize GPS waypoints measured in 2025
+
+```{r}
+# View the structure of plots_measured_2025_sheet
+plot_in_sheets <- plots_measured_2025_sheet |> 
+  select(`Plot id`, `GPS WPT`, Latitude, Longitude) |> 
+  rename(gps_wpt = `GPS WPT`, plot_id = `Plot id`)
+
+View(plot_in_sheets)
+
+
+# Extract unique GPS waypoints from fbat_fuel_depths
+fbat_gps_wpts_measured <- fbat_fuel_depths |> 
+  select(FBAT_plot_id, gps_wpt ) |> 
+  distinct()
+
+View(fbat_gps_wpts_measured)
+# Match with GPS coordinates
+# Convert gps_wpt to character to match name column in gps_coords_df
+fbat_gps_wpts_final <- fbat_gps_wpts_measured |> 
+  mutate(gps_wpt = as.character(gps_wpt)) |> 
+  left_join(
+    gps_coords_df |> 
+      select(name, lon, lat, elev, date, file) |> 
+      distinct(),
+    by = c("gps_wpt" = "name"),
+    relationship = "many-to-one"
+  ) |> 
+  left_join(
+    plots_measured_2025_sheet,
+    by = c("FBAT_plot_id" = names(plots_measured_2025_sheet)[1]),  # Match by first column (likely plot ID)
+    relationship = "many-to-one"
+  ) |> 
+  rename(
+    wpt_name = gps_wpt,
+    wpt_lon = lon,
+    wpt_lat = lat,
+    wpt_elev = elev,
+    wpt_date = date,
+    gps_source = file
+  )
+
+glimpse(fbat_gps_wpts_final)
+View(fbat_gps_wpts_final)
+
+# Save finalized GPS waypoints
+writexl::write_xlsx(fbat_gps_wpts_final, 
+                     file.path(base_dir, "data", "analyzed_data", "fbat_gps_waypoints_2025_final.xlsx"))
+
+```
+
+
+# Make a track of navigation through all measured FBAT plots in 2025
+```{r}
+track_dir <- file.path(base_dir, "GPS_data_backup", "Garmin GPSMAP 65", "Garmin", "GPX", "Archive")
+track_files <- list.files(track_dir, pattern = "^2025.*\\Auto.gpx$", full.names = TRUE)
+track_files
+tracks <- lapply(track_files, function(file) {
+              gpx_data <- sf::st_read(file, layer = "tracks", quiet = TRUE)
+                  }
+)
+track_data <- do.call(rbind, tracks)
+
+sf::st_write(track_data, file.path(base_dir, "data", "GPS_data_backup", "compiled_gpx_data_2025", "fbat_2025_navigation_track.gpkg"), driver = "GPKG", delete_layer = TRUE)
+
+sf::st_write(track_data, file.path(base_dir, "data", "GPS_data_backup", "compiled_gpx_data_2025", "fbat_2025_navigation_track.kml"), driver = "kml", delete_layer = TRUE)
+
+
+```
+
+
+# Final FBAT plot GPS coordinates for 2025
+```{r}
+fbat_plots <- read_excel(file.path(base_dir, "data", "analyzed_data", "fbat_plots_original.xls"))
+names(fbat_plots             )
+
+# make it a spatial data frame
+fbat_plots_2025 <- read.csv(file.path(base_dir, "data", "analyzed_data", "final_plots_measured_2025.csv")) |> 
+                 left_join(
+                  fbat_plots, 
+                  by = c("fbat_id_2025" = "fbat_plot_id")
+                 )
+
+View(fbat_plots_sf)
+
+
+```
+
+
+
+
+# Extract orthophotos from drone data zip files
+```{r}
+zip_src <- "I:/Drone_data_analysis_2025"
+outpur_dir <- "I:/Drone_data_analysis_2025/drone_Orthophotos"
+file_src <- "odm_orthophoto/odm_orthophoto.tif"
+
+
+extract_and_rename_tifs(
+  zip_dir = zip_src,
+  output_dir = outpur_dir,
+  file_to_extract = file_src
+)
+
+
+```
+
+# Extract ndvi tif from drone data zip files
+```{r}
+
+```
+
+
+
+## Load functions
+
+```{r }
+# Functions are provided by the locally installed forestPluse package.
+packageVersion("forestPluse")
+
+```
+
+## Load data
+
+
+```{r pressure, echo=FALSE}
+
+fbat_crown_cover <- read_csv(file.path(base_dir, "data", "analyzed_data", "fbat_crown_cover.csv"))
+fbat_tree_measurement <- read_csv(file.path(base_dir, "data", "analyzed_data", "fbat_tree_measurement.csv"))
+fbat_vegetation <- read_csv(file.path(base_dir, "data", "analyzed_data", "fbat_vegetation.csv"))
+fbat_fuel_depths <- read_csv(file.path(base_dir, "data", "analyzed_data", "fbat_fuel_depths.csv"))
+
+glimpse(fbat_crown_cover)
+glimpse(fbat_tree_measurement)
+glimpse(fbat_vegetation)
+View(fbat_fuel_depths)
+
+
+```
+
+## Match GPS waypoints from fuel depths with GPS coordinates
+
+```{r}
+# Match gps_wpt from fbat_fuel_depths with name column in gps_coords_df
+fbat_fuel_depths_with_coords <- fbat_fuel_depths |> 
+  left_join(
+    gps_coords_df |> 
+      select(name, lon, lat, elev, date) |> 
+      distinct(),
+    by = c("gps_wpt" = "name"),
+    relationship = "many-to-one"
+  ) |> 
+  rename(
+    gps_wpt_lon = lon,
+    gps_wpt_lat = lat,
+    gps_wpt_elev = elev,
+    gps_wpt_date = date
+  )
+
+glimpse(fbat_fuel_depths_with_coords)
+View(fbat_fuel_depths_with_coords)
+
+
+```
+
+## Data exploration
+```{r}
+# species code reference
+species_codes <- read_excel("data\\v9-5_2024-10_Natl_MasterTreeSpeciesList.xlsx")
+
+View(species_codes)
+
+```
+
+# Compiling coordiantes of fbat plots measured in 2025
+
+```{r}
+fbat_measured_ipad_2025 <- data.frame(
+  FBAT_plot_id = unique(fbat_fuel_depths$FBAT_plot_id),
+
+
+  latitude = c(38.12345, 38.23456, 38.34567),
+  longitude = c(-120.12345, -120.23456, -120.34567)
+)
+```
+
+## Calculations suggested by Brown 1974
+```{r}
+# Slope correction function
+slope_correction <- function(slope){
+    angle <- slope # angle in degrees
+    percent_slope <- tan(angle * (pi / 180)) * 100 # convert angle to percent slope
+    corrected_slope <- sqrt(1 + (percent_slope / 100)^2) # slope correction factor
+  return(round(corrected_slope, 2))
+}
+
+# QMD (Quadratic Mean Diameter) function
+# "This is the diameter of the tree of average basal area. FOr a stand with only one tree, QMD = DBH.
+# For a stand with more than one tree, QMD is calculated as the square root of the mean of the squared 
+# diameters of all trees in the stand."
+qmd <- function(dbh){ 
+  qmd_value <- sqrt(mean(dbh^2, na.rm = TRUE)) # calculate QMD
+  return(round(qmd_value, 2))
+}
+
+# SDI (Stand Density Index) function
+sdi <- function(ba, qmd){
+  sdi_value <- (ba / (0.005454 * qmd^2)) # calculate SDI
+  return(round(sdi_value, 2))
+} 
+
+
+slope_correction(30) # example usage                    
+```     
+
+## Calculate plot wise canopy density
+```{r}
+
+crwonDensity <- calculate_crownDensity(df = fbat_crown_cover)
+
+
+```
+
+## Calculate plot wise basal area, QMD, SDI
+```{r}
+# Basal area per plot and species
+fbat_trees <- fbat_tree_measurement |> 
+  select(FBAT_plot_id, tree_tag, tree_species, tree_dbh, tree_height)
+fbat_spps_basalArea <- calculate_plot_species_basal_area(
+                                          ,
+                                          dbh_col = "tree_dbh",
+                                          species_col = "tree_species",
+                                          plot_col = "FBAT_plot_id",
+                                          height_col = "tree_height",
+                                          units = "m2"
+                                          )
+fbat_spps_basalArea
+
+# Calculate QMD and SDI per plot
+fbat_plot_tree <- fbat_spps_basalArea |> 
+  mutate(
+    QMD = qmd(dbh = mean_dbh_cm),
+    SDI = sdi(ba = total_basal_area_m2, qmd = QMD)
+  )
+
+View(fbat_plot_tree)
+```
+
+# 1. Post-disturbance regeneration and fuel depths
+ ## Do topography and landscape-level patterns in fire severity predict post-disturbace regeneration 
+ ## following high-severity fire ? 
+
+
+```{r}
+ca_GISdata_dir <- "D:\\Datasets"
+
+
+# Load fuel management data
+fuel_mgmt <- st_read(file.path(ca_GISdata_dir, "CA_fuelMgmt.gpkg")) |> 
+                st_transform(st_crs("epsg:5070"))
+
+
+# Load wildfire data
+fire <- st_read(file.path(ca_GISdata_dir, "CA_mtbs_perims.gpkg")) |> 
+                st_transform(st_crs("epsg:5070"))
+# Load outbreak data
+outbreaks <- st_read(file.path(ca_outbreak_src, "cal_outbreaks.gpkg"))  |> 
+                st_transform(st_crs("epsg:5070"))
+
+```
+
+# FBAT plots
+```{r}
+# Total plots measured in 2025
+# fbat_plots_2025 <- read_excel((here::here("Rfbat/data/fbat_measured in 2025 with details.xls")), sheet = "final_plots_2025")
+fbat_plots_2025 <- sf::st_read(here::here("Rfbat\\data\\analyzed_data\\fbat_plots_2025.gpkg")) |> 
+                    st_transform(st_crs("epsg:5070")) |> 
+                    select(-c(Join_Count, TARGET_FID, Field, t1_y, t1_x, t1_azmth, t1_slope)) |> 
+                    mutate(
+                      x = st_coordinates(Shape)[,1],
+                      y = st_coordinates(Shape)[,2]
+                    )
+View(fbat_plots_2025)
+```
+
+
+# Preparing Regeneration data for analysis
+```{r}
+# Vegetation data from iPads Pro
+regeneration_ipadsPro <- read.csv(here::here("Rfbat/data/iPad Pro data/vegetation_pro.csv")) |> 
+                        select(
+                        FBAT_plot_id, transect, transect_slope, transect_azimuth, 
+                        herb_pcnt_alive_est,	herbs_avg_hgt_est,	herbs_pcnt_cover_est,	
+                        grass_avg_hgt_est,	grass_pcnt_alive_est,	grass_pcnt_cover_est,
+                        shrubs_avg_hgt_est,	shrubs_pcnt_alive_est,	shrubs_pcnt_cover_est,
+                        seedlingsSaplings_avg_hgt_est,	seedlingsSaplings_pcnt_alive_est,	seedlingsSaplings_pcnt_cover_est,	seedling_sapling_count,
+                        species, seedling_sapling_type, height_cm, dbh, alive_dead, vigore_class
+                        ) |> 
+                        mutate(
+                          transect = case_when(
+                          transect == "Transect 1" ~ 1,
+                          transect == "Transect 2" ~ 2,
+                          transect == "Transect 3" ~ 3)
+                          ) |>
+                        filter(
+                          !is.na(FBAT_plot_id)
+                          )
+
+View(regeneration_ipadsPro)
+
+# Vegetation data from Sushil's iPad
+regeneration_Myipad <- read.csv(here::here("Rfbat/data/Sushil's iPad/vegetation_sp.csv")) |> 
+                        select(
+                        FBAT_plot_id, transect, transect_slope, transect_azimuth,
+                        herb_pcnt_alive_est,	herbs_avg_hgt_est,	herbs_pcnt_cover_est,	
+                        grass_avg_hgt_est,	grass_pcnt_alive_est,	grass_pcnt_cover_est,
+                        shrubs_avg_hgt_est,	shrubs_pcnt_alive_est,	shrubs_pcnt_cover_est,
+                        seedlingsSaplings_avg_hgt_est,	seedlingsSaplings_pcnt_alive_est,	seedlingsSaplings_pcnt_cover_est,	seedling_sapling_count,
+                        species, seedling_sapling_type, height_cm, dbh, alive_dead, vigore_class
+                        ) |> 
+                        mutate(
+                          transect = case_when(
+                          transect == "Transect 1" ~ 1,
+                          transect == "Transect 2" ~ 2,
+                          transect == "Transect 3" ~ 3)
+                          ) |>
+                        filter(
+                          !is.na(FBAT_plot_id)
+                          )
+View(regeneration_Myipad)
+
+
+# Vegetation data from scanned datasheets
+regeneration_datasheet <- read_excel(
+                                  (here::here("Rfbat/data/FBAT_plot_data_2025.xlsx")),
+                                  sheet = "vegetation_regeneration"
+                                  ) |> 
+                                  select(
+                                  FBAT_plot_id, transect, transect_slope, transect_azimuth,
+                                  herb_pcnt_alive_est,	herbs_avg_hgt_est,	herbs_pcnt_cover_est,	
+                                  grass_avg_hgt_est,	grass_pcnt_alive_est,	grass_pcnt_cover_est,
+                                  shrubs_avg_hgt_est,	shrubs_pcnt_alive_est,	shrubs_pcnt_cover_est,
+                                  seedlingsSaplings_avg_hgt_est,	seedlingsSaplings_pcnt_alive_est,	seedlingsSaplings_pcnt_cover_est,	seedling_sapling_count,
+                                  species, seedling_sapling_type, height_cm, dbh, alive_dead, vigore_class
+                                  ) |> 
+                                  filter(
+                                    !is.na(FBAT_plot_id)
+                                  ) |> 
+                                  mutate(
+                                    seedlingsSaplings_pcnt_alive_est = as.numeric(
+                                      ifelse(is.na(seedlingsSaplings_pcnt_alive_est), 0.0, seedlingsSaplings_pcnt_alive_est)
+                                      ),
+                                    seedlingsSaplings_pcnt_cover_est = as.numeric(
+                                      ifelse(is.na(seedlingsSaplings_pcnt_cover_est), 0.0, seedlingsSaplings_pcnt_cover_est)
+                                      )
+                                  )
+                                  
+
+View(regeneration_datasheet)
+
+# Verify total columns and column names in each dataset
+View(janitor::compare_df_cols(
+                          regeneration_ipadsPro,
+                          regeneration_Myipad,
+                          regeneration_datasheet
+                          )
+)
+
+
+# Combine all regeneration datasets into one
+regeneration_combined <- bind_rows(
+                          regeneration_ipadsPro,
+                          regeneration_Myipad,
+                          regeneration_datasheet
+                          )
+
+
+```
+
+
+
+## Prepare tree_measurement data for analysis
+```{r}
+# Tree measurement data from iPads Pro
+tree_measurement_ipadsPro <- read.csv(here::here("Rfbat/data/iPad Pro data/tree_measurement_pro.csv")) |> 
+                            select(FBAT_plot_id, tree_tag, tree_azm, tree_distance, tree_species, tree_dbh, tree_height, tree_cbh, tree_hlc, deadAlive, tree_vigore_class, mortality_phase,	snag_class,	pitch_tubes,	frass,	bb_gallaries,	bb_spps,	fire_damage,	mechanical_damage,	suppressed,	tree_disease,	cod,	THM_comment,	tree_comment) |>
+                            filter(!is.na(FBAT_plot_id))
+View(tree_measurement_ipadsPro) 
+
+# Tree measurement data from Sushil's iPad
+tree_measurement_Myipad <- read.csv(here::here("Rfbat/data/Sushil's iPad/tree_measurement_sp.csv")) |> 
+                            select(FBAT_plot_id, tree_tag, tree_azm, tree_distance, tree_species, tree_dbh, tree_height, tree_cbh, tree_hlc, deadAlive, tree_vigore_class, mortality_phase, snag_class,	pitch_tubes,	frass,	bb_gallaries,	bb_spps,	fire_damage,	mechanical_damage,	suppressed,	tree_disease,	cod,	THM_comment,	tree_comment) |>
+                            filter(!is.na(FBAT_plot_id))
+View(tree_measurement_Myipad)
+
+# Tree measurement data from scanned datasheets
+tree_measurement_datasheet <- read_excel(
+                                  (here::here("Rfbat/data/FBAT_plot_data_2025.xlsx")),
+                                  sheet = "tree_measurement"
+                                  ) |>
+                                  select(FBAT_plot_id, tree_tag, tree_azm, tree_distance, tree_species, tree_dbh, tree_height, tree_cbh, tree_hlc, deadAlive, tree_vigore_class, mortality_phase, snag_class,	pitch_tubes,	frass,	bb_gallaries,	bb_spps,	fire_damage,	mechanical_damage,	suppressed,	tree_disease,	cod,	THM_comment,	tree_comment) |>
+                                  filter(!is.na(FBAT_plot_id))
+View(tree_measurement_datasheet)
+
+# Verify total columns and column names in each dataset
+View(janitor::compare_df_cols(
+                          tree_measurement_ipadsPro,
+                          tree_measurement_Myipad,
+                          tree_measurement_datasheet
+                          )
+)
+
+# Combine all tree measurement datasets into one
+tree_measurement_combined <- bind_rows(
+                          tree_measurement_ipadsPro,
+                          tree_measurement_Myipad,
+                          tree_measurement_datasheet
+                          ) 
+
+
+
+# Join tree measurement data with fbat plot data
+tree_measurement_combined <- tree_measurement_combined |> 
+                            left_join(
+                              fbat_plots_2025 |> 
+                            st_drop_geometry() |>  
+                               select_all(),                                 
+                              by = c("FBAT_plot_id" = "fbat_id_2025")
+                            )
+
+View(tree_measurement_combined)
+
+
+
+
+
+
+
+```
+
+# Locate the tree and calculate coordinate of trees based on plot GPS coordinates, tree azimuth and distance from plot center
+```{r}
+tree_coordinate <- locate_tree(
+                    x = tree_measurement_combined$x,
+                    y = tree_measurement_combined$y,
+                    azimuth = tree_measurement_combined$tree_azm,
+                    distance = tree_measurement_combined$tree_distance,
+                    id = tree_measurement_combined$FBAT_plot_id
+                    )
+
+View(tree_coordinate)
+
+tree_measurement_combined <- tree_measurement_combined |> 
+                            bind_cols(tree_coordinate)
+
+# save tree_measurement_combined for further analysis
+writexl::write_xlsx(tree_measurement_combined, 
+              file.path(base_dir, "data", "analyzed_data", "tree_measurement_final_2025.xlsx"))
+
+# Final cleaned tree measurement data table 
+tree_measurement_combined <- read_excel(file.path(base_dir, "data", "analyzed_data", "tree_measurement_final_2025.xlsx"))
+View(tree_measurement_combined)
+
+
+
+```
+
+# comparing tree height measured in field and from crown height model
+```{r}
+
+```
+
+
+# Preparing crown cover data for analysis
+```{r}
+# Crown cover data from iPads Pro
+crown_cover_ipadsPro <- read.csv(here::here("Rfbat/data/iPad Pro data/crown_cover_pro.csv")) |> 
+                        select(FBAT_plot_id, crown_cover_est
+```
+
+# Standardize species names in the combined dataset
+```{r}
+regeneration_combined <- clean_species_names(
+                          df = regeneration_combined,
+                          species_col = species
+                          )
+View(regeneration_combined)
+colnames(regeneration_combined)
+```
+
+
+# 
+```{r}
+create_species_pivot <- function(data, 
+                                 species_col = "species",
+                                 keep_species = c("Ponderosa Pine", 
+                                                  "Incense Cedar", 
+                                                  "White Fir"),
+                                 group_cols = c("FBAT_plot_id", "transect")) {
+  
+  
+  # Step 1: Reclassify species — unspecified become "Others"
+  data <- data %>%
+    mutate(species_group = ifelse(!!sym(species_col) %in% keep_species,
+                                  !!sym(species_col),
+                                  "Others"))
+  
+  # Step 2: Summarize count per group
+  summary_df <- data %>%
+    group_by(across(all_of(group_cols)), species_group) %>%
+    summarise(species_count = n(), .groups = "drop")
+  
+  # Step 3: Pivot wider so each species group becomes a column
+  pivot_df <- summary_df %>%
+    pivot_wider(names_from  = species_group,
+                values_from = species_count,
+                values_fill = 0)
+  
+  # Step 4: Join back non-species summary columns (first row per group)
+  meta_cols <- setdiff(names(data), 
+                       c(species_col, "species_group", "seedling_sapling_count",
+                         "seedling_sapling_type", "height_cm", "dbh", 
+                         "alive_dead", "vigore_class"))
+  
+  meta_df <- data %>%
+    group_by(across(all_of(group_cols))) %>%
+    summarise(across(all_of(setdiff(meta_cols, group_cols)), 
+                     ~ first(na.omit(.))), 
+              .groups = "drop")
+  
+  # Step 5: Merge metadata with pivot counts
+  result <- left_join(meta_df, pivot_df, by = group_cols)
+  
+  return(result)
+}
+
+species_pivot_result <- create_species_pivot(
+  data = regeneration_combined,
+  species_col = "species",
+  keep_species = c("Ponderosa Pine", "Incense Cedar", "White Fir"),
+  group_cols = c("FBAT_plot_id", "transect")
+)
+
+View(species_pivot_result)
+
+```  
+
+
+
+
+# Join these information with FBAT plot information with outbreak, wildfire, and fuel management data to explore patterns in post-disturbance regeneration
+```{r}
+# Join species pivot result with fbat_plots_2025fb
+spatialJoin_table <- readxl::read_xlsx(here::here("Rfbat\\data\\analyzed_data\\fbat_spatialJoin_fire_fuel_outbreaks.xlsx"))
+View(spatialJoin_table)
+
+fbat_plots_with_regeneration <- spatialJoin_table |> 
+  left_join(species_pivot_result, by = c("fbat_id_2025" = "FBAT_plot_id"))
+
+View(fbat_plots_with_regeneration)
+
+# Export fbat_plots_with_regeneration for further analysis  
+writexl::write_xlsx(fbat_plots_with_regeneration, 
+                     file.path(base_dir, "data", "analyzed_data", "fbat_plots_with_regeneration_2025.xlsx"))
+
+
+fbat_plots_with_regeneration <- readxl::read_xlsx(file.path(base_dir, "data", "analyzed_data", "fbat_plots_with_regeneration_2025.xlsx"))
+View(fbat_plots_with_regeneration)
+```
+
+
+# Prepare final approved fbat plots list
+```{r}
+# Matched approved FBAT plots from regeneration plots and extract relevant GPS data
+gps_backup_dir <- file.path("D:\\Datasets\\Field data 2025 backup\\GPS_data_backup")
+
+compiled_gpx_2025 <- readxl::read_xlsx(
+  file.path(gps_backup_dir, "Field_plot_progress.xlsx"),
+  sheet = "compiled_gpx_2025"
+) |>
+  mutate(gps_wpt = readr::parse_number(as.character(name))) |>
+  select(gps_wpt, date) |>
+  distinct(gps_wpt, .keep_all = TRUE)
+
+View(compiled_gpx_2025)
+
+
+approved_fbat_plots <- readxl::read_xlsx(
+  file.path(gps_backup_dir, "approved_field_plots_2026.xlsx"),
+  sheet = "final_approved_plots"
+) |>
+  mutate(gps_wpt = readr::parse_number(as.character(gps_wpt)))
+
+View(approved_fbat_plots)
+
+# Matched the gps_wpt in approved_fbat_plots with gps_wpt in compiled_gpx_2025 and get date information from compiled_gpx_2025 into Measured_date in approved_fbat_plots
+fbat_plots_approved <- approved_fbat_plots |>
+  left_join(compiled_gpx_2025, by = "gps_wpt") |>
+  rename(measured_fulldate = date) |> 
+  mutate(Measured_date = date(measured_fulldate))
+
+View(fbat_plots_approved)
+
+
+fbat_plots_with_regeneration <-  readxl::read_xlsx(file.path(base_dir, "data", "analyzed_data", "fbat_plots_with_regeneration_2025.xlsx"))
+
+sheet_transect_reentered <- readxl::read_xlsx(file.path(base_dir, "data", "analyzed_data", "Fbat_Reg_Slope added.xlsx"))
+
+
+View(sheet_transect_reentered)
+
+View(fbat_plots_with_regeneration)
+
+
+# Extract t1_azmth, t2_azmth, and t3_azmth from fbat_plots_with_regeneration
+transect_azimuth_regen <- fbat_plots_with_regeneration |>
+  mutate(
+    fbat_id_2025 = as.character(fbat_id_2025),
+    transect_num = readr::parse_number(as.character(transect)),
+    transect_azimuth = suppressWarnings(as.numeric(transect_azimuth))
+  ) |>
+  filter(
+    !is.na(fbat_id_2025),
+    transect_num %in% c(1, 2, 3),
+    !is.na(transect_azimuth)
+  ) |>
+  mutate(transect_col = paste0("t", transect_num, "_azmth")) |>
+  group_by(fbat_id_2025, transect_col) |>
+  summarise(transect_azimuth = dplyr::first(transect_azimuth), .groups = "drop") |>
+  tidyr::pivot_wider(names_from = transect_col, values_from = transect_azimuth)
+
+# Second attempt: extract available azimuth from sheet_transect_reentered
+transect_azimuth_reentered <- sheet_transect_reentered |>
+  mutate(
+    fbat_id_2025 = as.character(fbat_id_2025),
+    transect_num = readr::parse_number(as.character(transect)),
+    transect_azimuth = suppressWarnings(as.numeric(transect_azimuth))
+  ) |>
+  filter(
+    !is.na(fbat_id_2025),
+    transect_num %in% c(1, 2, 3),
+    !is.na(transect_azimuth)
+  ) |>
+  mutate(transect_col = paste0("t", transect_num, "_azmth")) |>
+  group_by(fbat_id_2025, transect_col) |>
+  summarise(transect_azimuth = dplyr::first(transect_azimuth), .groups = "drop") |>
+  tidyr::pivot_wider(names_from = transect_col, values_from = transect_azimuth)
+
+ensure_az_cols <- function(df) {
+  for (nm in c("t1_azmth", "t2_azmth", "t3_azmth")) {
+    if (!nm %in% names(df)) df[[nm]] <- NA_real_
+  }
+  df
+}
+
+transect_azimuth_regen <- ensure_az_cols(transect_azimuth_regen)
+transect_azimuth_reentered <- ensure_az_cols(transect_azimuth_reentered)
+
+transect_azimuth_regen <- transect_azimuth_regen |>
+  rename(
+    t1_azmth_regen = t1_azmth,
+    t2_azmth_regen = t2_azmth,
+    t3_azmth_regen = t3_azmth
+  )
+
+transect_azimuth_reentered <- transect_azimuth_reentered |>
+  rename(
+    t1_azmth_reentered = t1_azmth,
+    t2_azmth_reentered = t2_azmth,
+    t3_azmth_reentered = t3_azmth
+  )
+
+fbat_plots_approved <- fbat_plots_approved |>
+  select(-any_of(c(
+    "t1_azmth", "t2_azmth", "t3_azmth",
+    "t1_azmth_regen", "t2_azmth_regen", "t3_azmth_regen",
+    "t1_azmth_reentered", "t2_azmth_reentered", "t3_azmth_reentered"
+  ))) |>
+  mutate(fbat_id_2025 = as.character(fbat_id_2025)) |>
+  left_join(transect_azimuth_regen, by = "fbat_id_2025") |>
+  left_join(transect_azimuth_reentered, by = "fbat_id_2025") |>
+  mutate(
+    t1_azmth = dplyr::coalesce(t1_azmth_regen, t1_azmth_reentered, 0),
+    t2_azmth = dplyr::coalesce(t2_azmth_regen, t2_azmth_reentered, 120),
+    t3_azmth = dplyr::coalesce(t3_azmth_regen, t3_azmth_reentered, 270)
+  ) |>
+  select(-matches("_regen$|_reentered$"))
+
+missing_azmth <- fbat_plots_approved |>
+  filter(!is.na(fbat_id_2025), is.na(t1_azmth), is.na(t2_azmth), is.na(t3_azmth)) |>
+  distinct(fbat_id_2025)
+
+if (nrow(missing_azmth) > 0) {
+  message(
+    "No transect azimuths found for fbat_id_2025: ",
+    paste(missing_azmth$fbat_id_2025, collapse = ", ")
+  )
+}
+
+View(fbat_plots_approved)
+
+```
+
+# Extract the table requested by Prof. Kulakowski
+```{r}
+# Export the table requested by Prof. Kulakowski
+readr::write_csv(fbat_plots_approved, file.path(base_dir, "data", "analyzed_data", "fbat_plots_approved_2025.csv"))
+
+# Some manual updates have been made in this table after initial export
+field_plots <- readxl::read_xlsx(file.path(base_dir, "data", "analyzed_data", "fbat_plots_approved_2026.xlsx"))
+View(field_plots)
+
+# Create sf object from field_plots
+field_plots_sf <- field_plots |>
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326, remove = FALSE)
+
+
+```
+
+# Extract topographic information using field_plots
+```{r}
+
+
+
+
+```
+
+
+# Extract Climatic variables using field_plots
+```{r}
+
+```
+
+
+
+
+```{r}
+# Find the date for following gps wpts
+redmt_gpsWPT <- data.frame(gps_wpt = c(24,0,27,7,6,28,30,10,11,25,26,9,13,12,23,0,19,22,20,8,33,0,0,36,0),
+                          fbat_id_2025 = c(158, 164, 166, 168, 169, 171, 173, 174, 177, 181, 183, 190, 195, 198, 199, 203, 205, 206, 209, 211, 213, 204, 167, 200, 202)
+                          )
+
+# extract date information for these gps wpts from compiled_gpx_2025
+redmt_gpsWPT_dates <- compiled_gpx_2025 |>
+  filter(gps_wpt %in% redmt_gpsWPT$gps_wpt) |> 
+  mutate(surveydate = as.Date(date)) |> 
+  mutate(fbat_id_2025 = redmt_gpsWPT$fbat_id_2025[match(gps_wpt, redmt_gpsWPT$gps_wpt)]) |>
+  select(fbat_id_2025, gps_wpt, surveydate)
+
+View(redmt_gpsWPT_dates)
+
+# Export this table for further analysis
+writexl::write_xlsx(redmt_gpsWPT_dates, file.path(base_dir, "data", "analyzed_data", "redmt_gpsWPT_dates.xlsx"))
+
+
+# extract t1_azmth, t2_azmth, and t3_azmth for these gps wpts from regeneration_combined and reentered sheet
+redmt_plots_info <- redmt_gpsWPT_dates |>
+  left_join(
+    fbat_plots_with_regeneration |> 
+      select(fbat_id_2025, transect, transect_azimuth) |> 
+      mutate(transect_col = paste0("t", transect, "_azmth")) |> 
+      group_by(fbat_id_2025, transect_col) |>
+
+      summarise(transect_azimuth = dplyr::first(transect_azimuth), .groups = "drop") |> 
+      tidyr::pivot_wider(names_from = transect_col, values_from = transect_azimuth),
+    by = "fbat_id_2025"
+  ) |>
+  left_join(
+    sheet_transect_reentered |> 
+      select(fbat_id_2025, transect, transect_azimuth) |> 
+      mutate(transect_col = paste0("t", transect, "_azmth")) |> 
+      group_by(fbat_id_2025, transect_col) |> 
+      summarise(transect_azimuth = dplyr::first(transect_azimuth), .groups = "drop") |> 
+      tidyr::pivot_wider(names_from = transect_col, values_from = transect_azimuth),
+    by = "fbat_id_2025"
+  ) |>
+  left_join(
+    sheet_transect_reentered |> 
+      select(fbat_id_2025, transect, transect_azimuth) |> 
+      mutate(transect_col = paste0("t", transect, "_azmth")) |> 
+      group_by(fbat_id_2025, transect_col) |> 
+      summarise(transect_azimuth = dplyr::first(transect_azimuth), .groups = "drop") |> 
+      tidyr::pivot_wider(names_from = transect_col, values_from = transect_azimuth),
+    by = "fbat_id_2025"
+  ) |>
+  # mutate(
+  #   t1_azmth = dplyr::coalesce(t1_azmth.x, t1_azmth.y, 0),
+  #   t2_azmth = dplyr::coalesce(t2_azmth.x, t2_azmth.y, 120),
+  #   t3_azmth = dplyr::coalesce(t3_azmth.x, t3_azmth.y, 270)
+  # ) |>
+  select(fbat_id_2025, gps_wpt, surveydate, t1_azmth, t2_azmth, t3_azmth)
+
+
+
+redmt_plots_info
+
+```
+
+# FBAT 
+
+```{r}
+measured_fbat_plots <- read_excel(file.path(base_dir, "data", "analyzed_data", "fbat_plots_approved_2026.xlsx"), sheet = "fbat_plot_approved_2026")
+
+original_fbat_plots <- st_read(file.path(base_dir, "data", "analyzed_data", "measured_plots", "FBAT_Plots_Info.gpkg"))
+
+# Create a column in original_fbat_plots that matches the fbat_id_2025 in measured_fbat_plots
+original_fbat_plots <- original_fbat_plots |> 
+  mutate(measured_status = ifelse(fbat_id_2025 %in% measured_fbat_plots$fbat_id_2025, "Measured", "Remaining")) |> 
+  # use only name excluding "National Forest" for each values in FORESTNAME column to create a new column NF_name
+  mutate(NF_name = as.factor(gsub(" National Forest", "", FORESTNAME, " NF"))) 
+
+
+
+# Plot bar chart to show measured vs not measured plots per National FOrest
+plot_counts <- original_fbat_plots |>
+  st_drop_geometry() |>
+  count(NF_name, measured_status, name = "count")
+
+plot_counts_total <- plot_counts |>
+  group_by(NF_name) |>
+  summarise(count = sum(count), .groups = "drop") |>
+  mutate(measured_status = "Total")
+
+
+plot_counts_all <- bind_rows(plot_counts, plot_counts_total) |>
+  mutate(measured_status = factor(measured_status, levels = c("Measured", "Remaining", "Total")))
+
+plot_counts_summary <- plot_counts_all |>
+  mutate(measured_status = as.character(measured_status)) |>
+  group_by(NF_name) |>
+  summarise(
+    measured = sum(count[measured_status == "Measured"], na.rm = TRUE),
+    remaining = sum(count[measured_status == "Remaining"], na.rm = TRUE),
+    total = sum(count[measured_status == "Total"], na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  arrange(NF_name)
+
+print(plot_counts_summary)
+writexl::write_xlsx(plot_counts_summary, file.path(base_dir, "outputs", "fbat_plot_counts_summary.xlsx"))
+
+
+ggplot(plot_counts_all, aes(x = NF_name, y = count, fill = measured_status)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  geom_text(aes(label = count),
+            position = position_dodge(width = 0.9),
+            vjust = -0.25,
+            size = 3.5) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+
+  scale_fill_manual(values = c("Measured" = "#2E8B57", "Remaining" = "#D95F02", "Total" = "#4D4D4D")) +
+  guides(fill = guide_legend(nrow = 1, byrow = TRUE)) +
+  labs(title = "Measurement status of FBAT plots per national forest as of 2025 field season",
+       x = "",
+       y = "Count of FBAT plots",
+       fill = "") +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(angle = 0, hjust = 1, size = 12),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 12, margin = margin(t = 0.5)),
+    axis.title.x = element_text(size = 14),
+    axis.title.y = element_text(size = 14),
+    legend.position = c(0.8, 1),
+    legend.justification = c(0.5, 1),
+    legend.direction = "horizontal",
+    legend.background = element_rect(fill = "white", color = NA),
+    legend.title = element_text(size = 12),
+    legend.text = element_text(size = 11),
+    plot.margin = margin(t = 14, r = 10, b = 10, l = 10)
+  )
+
+ggsave(file.path(base_dir, "outputs", "fbat_plot_measurement_status.png"), width = 10, height = 6, dpi = 300)
+
+st_write(original_fbat_plots, file.path(base_dir, "data", "analyzed_data", "measured_plots", "FBAT_Plots_Info_updated.gpkg"), delete_dsn = TRUE)
+
+```

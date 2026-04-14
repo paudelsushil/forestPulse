@@ -1,0 +1,2544 @@
+---
+title: "Manuscript_v1.01"
+author: "S. Paudel"
+date: "2024-11-07"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# A. Install and Load Packages
+
+```{r}
+if (!require("drat")) {
+  install.packages("drat")
+ }
+drat::addRepo("cloudyr", "http://cloudyr.github.io/drat")
+
+# List of libraries
+libs <- c("here", "ranger", "caret","tidyverse", "tidyquant", "arrow", "terra", "sf", "zoo", "tmap", "data.table", "ncdf4", "gridExtra", "ggspatial", "ggtern", "patchwork", "magick", "rayshader", "AzureStor" )
+
+
+# List packages that are not installed
+installedLibs <- libs %in% 
+  rownames(
+    installed.packages()
+    ) 
+# Install packages if not installed
+if(any(installedLibs == F)){
+  install.packages(
+    libs[!installedLibs]
+  )
+}
+                   
+# Laod packages
+base::invisible(
+  lapply(
+    libs, library, character.only = T
+  )
+)        
+
+```
+
+# B. Cloud Connection
+
+```{r}
+
+# accountEndPoint <- "https://fordis.blob.core.windows.net/"
+# sas = "sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupyx&se=2025-05-31T06:31:09Z&st=2025-01-03T23:31:09Z&spr=https,http&sig=huCiO3ZCUlVl80fKTyO%2B8SLZZZ4rNHzkq3A3zLDvRt8%3D"
+
+# bolbEndPointKey <- AzureStor::blob_endpoint(accountEndPoint, sas = sas)
+
+# # List containers
+# AzureStor::list_blob_containers(bolbEndPointKey)
+# # List storage container
+# AzureStor::list_storage_containers(bolbEndPointKey)
+
+# analyzedCont <- AzureStor::storage_container(bolbEndPointKey, "analyzed")
+
+# # Create directory inside analyzed container
+# AzureStor::create_blob_dir(analyzedCont, "mtbsfire")
+
+
+
+# # Convert fire_lodgepole.gpkg to fire_lodgepole.parquet
+
+# # create bolb container
+# create_storage_container(bolbEndPointKey, "raw")
+# rawCont <- AzureStor::storage_container(bolbEndPointKey, "analyzed")
+
+# # Upload geoParquet file into mtbsfire directory of analyzed blob container
+# AzureStor::storage_upload(analyzedCont,
+#                          src = file.path(analyzed_src, 
+#                                          "mtbs_fire_data", "fire_lodgepole.parquet"),
+#                          dest = "mtbsfire/fire_lodgepole.parquet")
+
+
+
+
+```
+
+
+```{r}
+
+```
+
+# C. Duck DB for vector datasets
+
+```{r}
+# demPath <- file.path(raw_src,"topo_data/LF2020_Elev_220_CONUS/LF2020_Elev_220_CONUS/Tif/LC20_Elev_220.tif")
+
+# demrast <- rast(file.path(analyzed_src, "topo_data/conus_dem_1000m.tif"))
+ 
+# # Convert DEM to matrix (required for rayshader)
+# dem_matrix <- as.matrix(demrast, wide=TRUE)
+
+# # Create the base 3D terrain
+# dem_matrix %>%
+#   sphere_shade(texture = "desert") %>%
+#   add_shadow(ray_shade(dem_matrix, zscale = 30), 0.5) %>%
+#   add_shadow(ambient_shade(dem_matrix), 0) %>%
+#   plot_3d(dem_matrix,
+#           zscale = 30,
+#           windowsize = c(1000, 800),
+#           phi = 45,
+#           theta = 45,
+#           zoom = 0.75)
+# glimpse(fire_lodgepole)
+
+# # Load and process fire perimeter
+# fire_rast <- rasterize(vect(fire_lodgepole), demrast)
+# plot(fire_rast)
+# fire_matrix <- as.matrix(fire_rast, wide=TRUE)
+
+# # Create RGB matrix for fire overlay (red with transparency)
+# fire_rgb <- array(0, dim = c(nrow(fire_matrix), ncol(fire_matrix), 4))
+# fire_rgb[,,1] <- 1  # Red channel
+# fire_rgb[,,4] <- ifelse(!is.na(fire_matrix), 0.5, 0)  # Alpha channel (transparency)
+# # Add fire overlay
+# add_overlay(fire_rgb)
+
+# # Add finishing touches
+# render_compass()
+# render_scalebar(limits = c(0, 5, 10))
+
+# # Save the render
+# render_snapshot("3d_fire_map.png")
+
+
+# rayshader::add_overlay()
+
+# rgl::rglwidget()
+
+# glimpse(fire)
+```
+
+# D. Load Working directories
+
+```{r}
+# Define Raw datasets location
+raw_src <- here::here("external/raw_data")
+# Define analyzed datasets location
+analyzed_src <- here::here("external/analyzed_data")
+
+# Output files source
+results_src <- here::here("results") 
+fig_src <- here::here("results/figs")
+tbl_src <- here::here("results/tbls")
+pdf_src <- here::here("results/pdfs")
+
+
+tmmxM_dir <- here::here("external/analyzed_data/climate_data", "tmmx", "monthly")
+tmmnM_dir <- here::here("external/analyzed_data/climate_data", "tmmn", "monthly")
+prM_dir <- here::here("external/analyzed_data/climate_data", "pr", "monthly")
+
+pdsiM_dir <- here::here("external/raw_data/climate_data", "pdsi")
+scPdsiM_dir <- here::here("external/raw_data/climate_data", "scpdsi")
+pzIM_dir <- here::here("external/raw_data/climate_data", "pzi")
+
+vpdM_dir <- here("external/analyzed_data/climate_data/vpd/monthly")
+petM_dir <- here("external/analyzed_data/climate_data/pet/monthly")
+vsM_dir <- here("external/analyzed_data/climate_data/vs/monthly")
+rmaxM_dir <- here("external/analyzed_data/climate_data/rmax/monthly")
+rminM_dir <- here("external/analyzed_data/climate_data/rmin/monthly")
+sradM_dir <- here("external/analyzed_data/climate_data/srad/monthly")
+
+
+```
+
+# E. Load Functions
+
+```{r}
+source(here::here("R/functions.R"))
+# source(here::here("R/getGridmet.metadata.R"))
+# source(here::here("R/getGridmet.data.R"))
+# source(here::here("R/gridmetDaily2Monthly.R"))
+source(here::here("R/calculate.timeclass.R"))
+source(here::here("R/extractValue2Points.R"))
+
+source(here::here(r"(R\theme.R)"))
+source(here::here(r"(R\corrPlot.R)"))
+# source(here::here(r"(R\raster2table.R)"))
+
+```
+
+# 1. Load datasets
+
+We are focused in Lodgepole Pine distribution with Western Contiguous United States.
+
+## 1.1 Fire
+
+```{r Fire Affected Area}
+# Load a fire within the study area
+fireLodgepole <- st_read(file.path(analyzed_src, 
+                                    "mtbs_fire_data/fireLodgepole.gpkg"))
+
+
+# fire_lodgepole <- fire_lodgepole %>% 
+#                   dplyr::select(event_id, state, fire_date, fire_year, geom) %>% 
+#                   mutate(FireA_ha = calculate.area(., area.unit = "ha")) %>% 
+#                   calculate.timeclass(., "fire_year", 1984, 2023, 10, "fire")
+
+
+# fire_parquet <- fire_lodgepole %>% 
+#   mutate(geometry_wkt = st_as_text(geom)) %>% 
+#   st_drop_geometry(.)
+
+
+
+# write_parquet(fire_parquet, 
+#               file.path(analyzed_src, "mtbs_fire_data", "fire_lodgepole.parquet"))
+             
+
+file.exists(file.path(analyzed_src, "mtbs_fire_data", "fireLodgepole.gpkg"))            
+
+
+# Calculate area in Hactare
+# Read the parquet file and convert back to SF object
+# fire_lodgepole_restored <- open_dataset(file.path(analyzed_src, "mtbs_fire_data/fire_lodgepole.parquet")) %>%
+#   collect() %>%
+#   st_as_sf(wkt = "geometry_wkt", crs = st_crs("EPSG:5070"))
+
+
+fireLodgepole
+
+```
+
+### 1.1.1 Fire severity
+
+```{r Fire Severity, eval = FALSE}
+# Create a centriod for each fire
+# fireCentroids <- lapply(1:nrow(fire_lodgepole), function(fireRow){
+#   fireCentroids <- sf::st_centroid(fire_lodgepole[fireRow, ]) %>% 
+#     mutate(centroid_X = st_coordinates(.)[1],
+#          centroid_Y = st_coordinates(.)[2])
+  
+#     return(fireCentroids)
+#   }) 
+# # combined by row
+# fireCentroids <- do.call(rbind, fireCentroids)
+
+# # write a file
+# st_write(fireCentroids, file.path(here::here("external/analyzed_data/mtbs_fire_data/mtbs_severity", "fireCentroids.gpkg")), append = F)
+
+# # Fire Severity Info
+# fireSeverityInfo <- st_read(file.path(here::here("external/analyzed_data/mtbs_fire_data/mtbs_severity", "fireCentroidsMtbsI.gpkg")))
+```
+
+### Figure8
+
+```{r fire severity plot}
+# plot_a <- plot.fireSeverity(fireSeverityInfo, periodic = F)
+# plot_b <- plot.fireSeverity(fireSeverityInfo, periodic = T)
+
+
+# # Combine the plots
+# combined_plot <- grid.arrange(plot_a, plot_b,
+#                               ncol = 1,
+#                               heights = c(1, 1))
+# # Save the plot
+# ggsave(file.path(fig_src, "figure8.png"), combined_plot,
+#        width = 7, height = 6, dpi = 300)
+
+
+install.packages("fmsb")
+
+library(fmsb)
+
+ls('package:fmsb')
+```
+
+## 1.2 Fuel
+
+```{r Fuel Management area}
+fuel_lodgepole <- st_read(file.path(analyzed_src, 
+                                    "fuel_mgmt/fuel_lodgepole.gpkg"))
+
+# fuel_lodgepole %>% filter(is.na(JFSP_CODE) & fuel_present == 1)
+
+# Calculate area in Hactare
+fuel_lodgepole <- fuel_lodgepole %>% 
+  dplyr::select(state_abbr, fuel_date, fuel_year, JFSP_CODE, activity, geom) %>% 
+  mutate(FuelA_ha = calculate.area(., area.unit = "ha"),
+         fuelMgmt = "Managed") %>% 
+  calculate.timeclass(., "fuel_year", 1984, 2023, 10, "fuel") 
+  
+  
+totalManagedA_km <-  sum(fuel_lodgepole$FuelA_ha)
+
+fuel_lodgepole
+totalManagedA_km
+```
+
+## 1.3 Outbreak
+
+```{r Outbreak Area}
+outbreak_lodgepole <- st_read(file.path(analyzed_src, 
+                                        "outbreaks_data/outbreak_lodgepole.gpkg"))
+outbreak_lodgepole <- outbreak_lodgepole %>% 
+  st_transform(crs = "epsg:5070") %>% 
+  mutate(OutbreakA_ha = calculate.area(., "ha")) %>% 
+  calculate.timeclass(., "outbreak_year", 1984, 2023, 10, "outbreak")
+
+
+outbreak_lodgepole
+```
+
+## 1.4 Study area
+
+### 1.4.1 Administrative Boundary of 11 Western Conus
+
+```{r Administrative boundary}
+conus_states <- st_read(file.path(analyzed_src, 
+                        "conus_states/conus_states.gpkg"),
+                        layer = "conus_states")
+
+# sum(conus_states$states_area_km2) # 3072131 km2
+```
+
+### 1.4.2 Lodgepole Pine (P. contorta) dominated forest area
+
+```{r Study area}
+study_area <- st_read(file.path(analyzed_src, 
+                                "study_area/lodgepoleExtent.gpkg"))
+
+study_area <- study_area %>% 
+    mutate(studyA_ha = calculate.area(., "ha")) %>% 
+  st_transform(., "epsg:5070")
+
+
+
+# sum(study_area$studyA_ha) # 36765700 ha
+
+studyA_ha <- sum(study_area$studyA_ha) # 367657 km2
+studyA_ha
+```
+
+## 1.5 Outbreak between 1984 & 1996
+
+```{r Outbreak before 1996, eval = FALSE}
+
+ads78_04 <- st_read(file.path(raw_src, "outbreaks_data/r5/ADS_Regionwide_78_04.gdb"), layer = "ADS_78_04")
+
+adsr6 <- st_read(file.path(analyzed_src, "outbreaks_data/r6/R6_1984_1996.gpkg"))
+
+
+agent_list <- st_read(file.path(raw_src, "outbreaks_data/r5/ADS_Regionwide_78_04.gdb"), layer = "damage_agent")
+
+agent_list[agent_list$COMMON_NAM == "mountain pine beetle", ]
+
+sort(agent_list$COMMON_NAM)
+
+ads78_04 <- ads78_04 %>% rename(CODE = dca_common_name ) %>% 
+  mutate(CODE = as.numeric(CODE))
+  
+ads78_04 <- right_join(x = ads78_04, y = agent_list, by = "CODE", copy = T)
+
+
+
+r4 <- ads78_04 %>% dplyr::select(RPT_YR, COMMON_NAM, Shape) %>% 
+  filter(RPT_YR %in% c("1994","1995", "1996") & COMMON_NAM == "mountain pine beetle")
+
+r4 <- r4 %>% rename(outbreak_year = RPT_YR, 
+                    dca_common = COMMON_NAM)
+adsr6 <- adsr6 %>% rename(outbreak_year = outbreak_y)
+
+outbreak1984_1996 <- st_transform(r4, "epsg:5070") %>% 
+  rbind(., st_transform(adsr6, "epsg:5070"))
+
+outbreak1984_1996 <- outbreak1984_1996 %>% rename(outbreak_agents = dca_common)
+outbreak1984_1996 <- outbreak1984_1996 %>% rename(geom = Shape)
+
+outbreak_conus <- st_read(file.path(outbreak_src, "outbreak_conus.gpkg"))
+
+table(outbreak1984_1996$outbreak_agents)
+
+
+outbreak1984_2023 <- outbreak_conus %>% 
+  dplyr::select(outbreak_year, outbreak_agents, geom) %>%
+  rbind(., outbreak1984_1996)
+
+
+outbreak1984_2023 <- outbreak1984_2023 %>% 
+  mutate(outbreakArea_km2 = calculate.area(., "km2"))
+
+
+st_write(outbreak1984_1996, file.path(analyzed_src, "outbreaks_data/outbreak1984_1996.gpkg"))
+
+
+hist(out)
+```
+
+## Figure2
+
+```{r figure2, echo = FALSE}
+
+# Panel A: MPB outbreaks over time
+plot_a <- ggplot(outbreakLodgepole, aes(x = factor(outbreakYear), y = OutbreakA_ha)) +
+  geom_bar(stat = "identity", fill = "#1f77b4", width = 0.8) +
+  labs(x = NULL,  # remove x label as it's shared
+       y = expression("Area (ha × 10"^"3"*")"),
+       title = "(a) Mountain Pine Beetle Outbreaks") +
+  plot_theme() +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = function(x) x/1000,  # Convert to thousands
+                       expand = c(0, 0))
+plot_a  
+# Panel B: Fires over time
+plot_b <- ggplot(fireLodgepole, aes(x = factor(fireYear), y = FireA_ha)) +
+  geom_bar(stat = "identity", fill = "#ff7f0e", width = 0.8) +
+  labs(x = NULL,  # remove x label as it's shared
+       y = expression("Area (ha × 10"^"3"*")"),
+       title = "(b) Fire") +
+  plot_theme() +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = function(x) x/1000,  # Convert to thousands
+                       expand = c(0, 0))
+plot_b
+# Panel C: Fuel management over time
+plot_c <- ggplot(fuelLodgepole, aes(x = factor(fuelYear), y = FuelA_ha)) +
+  geom_bar(stat = "identity", fill = "#2ca02c", width = 0.8) +
+  labs(x = "Year",
+       y = expression("Area (ha × 10"^"3"*")"),
+       title = "(c) Fuel Management") +
+  plot_theme() +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = function(x) x/1000,  # Convert to thousands
+                       expand = c(0, 0))
+
+# Panel D: Annual mean, maximum, and Minimum PDSI values
+pdsiM_df <- raster2table_annual(pdsiM_dir, "\\.nc$", "pdsiM", aoi = conusStates)
+
+vpdM_df <- raster2table_annual(vpdM_dir, "\\.nc$", "vpdM", aoi = conusStates)
+
+
+plot_d <- plot_climate_trends(pdsiM_df, "PDSI")
+
+plot_d
+# Combine the plots
+combined_plot <- grid.arrange(plot_a, plot_b, plot_c, plot_d,
+                            ncol = 2, 
+                            heights = c(1, 1))
+
+
+# Save the plot
+ggsave(file.path(fig_src, "figure2.png"), combined_plot, 
+       width = 7, height = 5, dpi = 500)
+```
+
+## 1.6 Outbreaks in Managed Vs. Un-Managed
+
+```{r, eval = T, echo = FALSE}
+# Total outbreak over the time
+totalOutbreak <- sf::st_read(file.path(analyzed_src, "fireStrata/totalOutbreak.gpkg"))
+
+totalOutbreaks <- totalOutbreak %>% 
+  mutate(totalOutbreakA_ha = calculate.area(., "ha")) %>% 
+  st_drop_geometry(.) %>% 
+  dplyr::select(outbreak_year, outbreak_agents, totalOutbreakA_ha)
+
+# Total outbreak on managed forest over the time
+outbreakFuel <- sf::st_read(file.path(analyzed_src, "fireStrata/outbreakFuel.gpkg"))
+
+# Disturbances in Managed forests
+managedOutbreak <- outbreakFuel %>% 
+  mutate(fuelMgmt = "Managed",
+         managedOutbreakA_ha = calculate.area(., "ha")) %>% 
+  dplyr::select(outbreak_year, outbreak_agents, fuelMgmt,  managedOutbreakA_ha, geom) %>% 
+  st_drop_geometry(.)
+
+managedOutbreak
+
+# Summarize outbreak affected areas
+outbreakFuelInfo <- full_join(
+  totalOutbreak %>% 
+    select(outbreak_year, totalOutbreakA_ha),
+  managedOutbreak %>% 
+    select(outbreak_year, managedOutbreakA_ha),
+  by = "outbreak_year"
+) %>%
+  # Create long format with managed and unmanaged areas
+  mutate(unmanagedOutbreakA_ha = totalOutbreakA_ha - managedOutbreakA_ha) %>%
+  pivot_longer(
+    cols = c(managedOutbreakA_ha, unmanagedOutbreakA_ha),
+    names_to = "mgmtStatus",
+    values_to = "OutbreakA_ha"
+  ) %>%
+  mutate(
+    mgmtStatus = case_when(
+      mgmtStatus == "managedOutbreakA_ha" ~ "Managed",
+      mgmtStatus == "unmanagedOutbreakA_ha" ~ "Unmanaged"
+    )
+  )
+
+outbreakFuelInfo <-  outbreakFuelInfo %>% 
+  mutate(P_OutbreakA_ha = OutbreakA_ha/totalOutbreakA_ha)
+
+outbreakFuelInfo
+```
+
+## 1.7 Fire in Managed Vs. Un-Managed
+
+```{r Fire in Managed vs Unmanaged, eval = T, echo = F}
+
+# Total outbreak over the time
+totalFire <- sf::st_read(file.path(analyzed_src, "fireStrata/totalFire.gpkg"))
+totalFire
+totalFireInfo <- totalFire %>% 
+  mutate(totalFireA_ha = calculate.area(., "ha"))  %>% 
+  st_drop_geometry(.) %>% 
+  dplyr::select(fireYear, totalFireA_ha)
+totalFireInfo
+
+totalFireA_ha <- sum(totalFireInfo$totalFireA_ha)
+totalFireA_ha
+
+# Total outbreak on managed forest over the time
+fireFuel <- sf::st_read(file.path(analyzed_src, "fireStrata/fireFuel.gpkg"))
+
+fireFuel
+# Disturbances in Managed forests
+managedFire <- fireFuel %>% 
+  mutate(fuelMgmt = "Managed",
+         managedFireA_ha = calculate.area(., "ha")) %>% 
+  dplyr::select(fireYear, fuelMgmt,  managedFireA_ha, geom) %>% 
+  st_drop_geometry(.)
+
+managedFire
+
+# Summarize outbreak affected areas
+fireFuelInfo <- full_join(
+  totalFireInfo %>% 
+    dplyr::select(fireYear, totalFireA_ha),
+  managedFire %>% 
+    dplyr::select(fireYear, managedFireA_ha),
+  by = "fireYear"
+) %>%
+  # Create long format with managed and unmanaged areas
+  mutate(unmanagedFireA_ha = totalFireA_ha - managedFireA_ha) %>%
+  pivot_longer(
+    cols = c(managedFireA_ha, unmanagedFireA_ha),
+    names_to = "mgmtStatus",
+    values_to = "FireA_ha"
+  ) %>%
+  mutate(
+    mgmtStatus = case_when(
+      mgmtStatus == "managedFireA_ha" ~ "Managed",
+      mgmtStatus == "unmanagedFireA_ha" ~ "Unmanaged"
+    )
+  )
+
+
+
+fireFuelInfo <- fireFuelInfo %>% mutate(P_FireA_ha = FireA_ha/totalFireA_ha)
+
+table(fireFuelInfo$fireYear)
+```
+
+## 1.8 Fire in Managed: with vs without outbreak
+
+```{r}
+# Fire AND Fuel AND Outbrea, 
+fireOutbreakFuel <- sf::st_read(file.path(analyzed_src, "fireStrata/fireOutbreakFuel.gpkg"))
+  
+fireOutbreakFuel <- fireOutbreakFuel %>%
+  mutate(
+    outbreak_status = "Outbreak",
+    fire_outbreak_area_ha = calculate.area(., "ha")
+  ) 
+
+
+sum(fireOutbreakFuel$fire_outbreak_area_ha)
+st_crs(totalOutbreak)
+# Get fires without outbreaks using st_difference
+fires_no_outbreak <- fireOutbreakFuel %>%
+  st_difference(totalOutbreak) %>%
+  mutate(
+    outbreak_status = "No Outbreak",
+    fire_outbreak_area_ha = calculate.area(., "ha")
+  ) %>%
+  st_drop_geometry(.)
+
+fires_no_outbreak
+# Combine the data
+fire_outbreak_summary <- bind_rows(
+  fireOutbreakFuel,
+  fires_no_outbreak
+) %>%
+  group_by(fire_year, outbreak_status) %>%  # Added fire_year to grouping
+  summarize(
+    total_area_km2 = sum(fire_outbreak_area_km2),
+    .groups = "drop"
+  ) %>%
+  group_by(fire_year) %>%  # Group by year to calculate percentages within each year
+  mutate(
+    percent_area = total_area_ha / sum(total_area_ha)
+  ) %>%
+  ungroup()
+
+fire_outbreak_summary
+
+
+
+```
+
+## Figure3
+
+```{r figure3}
+# Panel A: Percent area affected by Outbreaks in managed vs unmanaged forests by year
+plot_a <- ggplot(outbreakFuelInfo, 
+                 aes(x = factor(outbreak_year), y = P_OutbreakA_ha, fill = mgmtStatus)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.8) +
+  labs(x = "Year",
+       y = expression("% of total outbreak area per year"),
+       fill = "Forest Management",
+       title = "Percent area affected by Outbreaks in managed vs unmanaged forests") +
+  plot_theme() +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = scales::percent_format())
+
+plot_a
+
+# Panel B: Percent area affected by Fires in managed vs unmanaged forests by year
+plot_b <- ggplot(fireFuelInfo, 
+                 aes(x = factor(fireYear), y = P_FireA_km2, fill = mgmtStatus)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.8) +
+  labs(x = "Year",
+       y = expression("% of total fire area per year"),
+       fill = "Forest Management",
+       title = "Percent area affected by Fires in managed vs unmanaged forests") +
+  plot_theme() +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = scales::percent_format())
+
+plot_b
+# Panel C: Fires in managed areas: with vs without subsequent outbreaks by year
+
+plot_c <- fire_outbreak_summary %>%
+  ggplot(aes( x = factor(fireYear), y = percent_area,
+              fill = outbreak_status)) +
+  # Bar plot configuration
+  geom_bar(stat = "identity",
+           position = "stack",
+           width = 0.8) +
+  # Color scheme
+  scale_fill_manual(
+    values = c("No Outbreak" = "#2ca02c","Outbreak" = "#d62728")) +
+  # Labels and title
+  labs(
+    x = "Year",
+    y = "% of outbreak area",
+    fill = "Outbreak Status",
+    title = "(c) Fires in managed areas: with vs without outbreaks"
+  ) +
+  plot_theme() +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = scales::percent_format())
+
+plot_c
+
+# Combine the plots
+combined_plot <- grid.arrange(plot_a, plot_b, plot_c, 
+                            ncol = 1, 
+                            heights = c(1, 1, 1))
+
+# Save the plot
+ggsave(file.path(fig_src, "figure3.png"), combined_plot, 
+       width = 7, height = 6, dpi = 300)
+
+```
+
+## Figure4
+
+```{r figure4}
+
+# Panel A: Percent area affected by Outbreaks in managed vs unmanaged forests
+plot_a <- ggplot(outbreakFuelInfo, aes(x = factor(outbreak_year), y = outbreakA_km2/sum(outbreakA_km2), 
+                                      fill = mgmtStatus)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.8) +
+  labs(x = "Year",
+       y = expression("% of total study area"),
+       fill = "Management Status",
+       title = "Percent area affected by Outbreaks in managed vs unmanaged forests") +
+  plot_theme() +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = scales::percent_format())
+
+# Panel B: Percent area affected by Fires in managed vs unmanaged forests
+plot_b <- ggplot(fireFuelInfo, aes(x = factor(fireYear), y = FireA_km2/sum(FireA_km2), 
+                                  fill = mgmtStatus)) +
+  geom_bar(stat = "identity", position = "stack",  width = 0.8) +
+  labs(x = "Year",
+       y = expression("% of total study area"),
+       fill = "Management Status",
+       title = "Percent area affected by Fires in managed vs unmanaged forests") +
+  plot_theme() +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = scales::percent_format())
+   
+# Panel C: Fires in managed areas: with vs without subsequent outbreaks
+plot_c <- ggplot(fire_outbreak_status %>%
+                   group_by(fireYear, outbreak_status) %>%
+                   summarize(percent_area = sum(fire_outbreak_area_km2)/sum(fire_outbreak_area_km2)), 
+                 aes(x = factor(fire_year), y = percent_area, fill = outbreak_status)) +
+  geom_bar(stat = "identity", position = "stack", width = 0.8) +
+  scale_fill_manual(values = c("No Outbreak" = "#2ca02c", 
+                              "Outbreak" = "#d62728"), 
+                    labels = c("No Outbreak", "Outbreak")) +
+  labs(x = "Year",
+       y = expression("% of total study area affected"), 
+       fill = "Outbreak Status",
+       title = "(c) Fires in managed areas: with vs without outbreaks") +
+  plot_theme() +
+  scale_x_discrete(breaks = seq(1984, 2023, by = 5)) +
+  scale_y_continuous(labels = scales::percent_format())
+
+
+
+
+# Combine the plots
+combined_plot <- grid.arrange(plot_a, plot_b, plot_c, 
+                            ncol = 1, 
+                            heights = c(1, 1, 1))
+
+# Save the plot
+ggsave(file.path(fig_src, "figure4.png"), combined_plot, 
+       width = 7, height = 6, dpi = 300)
+```
+
+# 2. Sampling Design
+
+## 2.1 Random samples with each stratum
+
+```{r Sampling Design}
+# Set to 1GB
+options(future.globals.maxSize = 1000 * 1024^2) 
+# FIre and Outbreak
+fireOutbreak <- sf::st_read(here::here(r"(external\analyzed_data\plots\strata\fireOutbreak.gpkg)"))
+fireOutbreak
+
+fireOutbreak <- fireOutbreak %>% filter(FireA_ha > 0)
+# fire and fuel
+fireFuel <- fireFuel %>% filter(FuelA_ha > 0)
+# fire, Outbreak and Fuel
+ fireOutbreakFuel <- fireOutbreakFuel %>% filter(OutbreakA_ha > 0)
+
+
+# Fire Samples
+set.seed(345)
+fireSamples <- create.samples(fire_lodgepole, areaCol = "FireA_ha", type = "regular", n_cores = 10L)
+fireSamples <- do.call(rbind, fireSamples)
+future::plan("sequential", .cleanup = T)
+gc()
+
+# Fuel Samples
+set.seed(456)
+fuelSamples <- create.samples(fuel_lodgepole, areaCol = "FuelA_ha", type = "regular", n_cores = 10L)
+fuelSamples <- do.call(rbind, fuelSamples)
+future::plan("sequential", .cleanup = T)
+gc()
+
+# Outbreak
+set.seed(567)
+outbreakSamples <- create.samples(outbreak_lodgepole, areaCol = "OutbreakA_ha", type = "regular", n_cores = 10L)
+outbreakSamples <- do.call(rbind, outbreakSamples)
+future::plan("sequential", .cleanup = T)
+gc()
+
+
+fireSamples
+fuelSamples
+outbreakSamples
+
+outbreak_lodgepole
+
+st_write(fireSamples, file.path(analyzed_src, "plots/strata/fireSamples.gpkg"))
+st_write(fuelSamples, file.path(analyzed_src, "plots/strata/fuelSamples.gpkg"))
+st_write(outbreakSamples, file.path(analyzed_src, "plots/strata/outbreakSamples.gpkg"))
+```
+
+## 2.2 Load samples from all strata
+
+```{r}
+allStrataWithFire <- sf::st_read(file.path(analyzed_src, "plots/strata/allStrataWithFire.gpkg"))
+
+
+
+
+```
+
+## 2.3 Combine and Label samples with each stratum
+
+```{r}
+stratifiedSamples <- allStrataWithFire %>%
+  mutate(
+    in_fire = if_else(!is.na(fire_id_2), 1, 0),
+    in_fuel = if_else(!is.na(fuel_year), 1, 0),
+    in_outbreak = if_else(!is.na(outbreak_year), 1, 0),
+
+    # Create strata label based on intersections
+    strata = case_when(
+      in_fire == 1 & in_fuel == 1 & in_outbreak == 1 ~ "fire_fuel_outbreak",
+      in_fire == 1 & in_fuel == 1 ~ "fire_fuel",
+      in_fire == 1 & in_outbreak == 1 ~ "fire_outbreak",
+      in_fire == 1 ~ "fire_only",
+      TRUE ~ "none"  # points that don't fall in any polygon
+    )
+  )
+
+table(stratifiedSamples$strata)
+```
+
+## 2.4 Random Non-fire samples
+
+```{r nonFireSamples}
+# Create allFireA
+allFireA <- st_union(fire_lodgepole)
+
+# Create the non-Fire area within Lodgepole pine forests area.
+nonFireA <- st_difference(study_area, allFireA)
+
+st_write(nonFireA, file.path(analyzed_src, 
+                                "mtbs_fire_data/nonFireA.gpkg"), append = F)
+# ====================================================================================
+# Load nonFireA.gpkg
+nonFireA <- st_read(file.path(analyzed_src, 
+                                "mtbs_fire_data/nonFireA.gpkg"))
+
+
+# Fire date count to make a pair with nonFire points
+fire_date_counts <- fireSamples %>%
+  group_by(fire_date) %>%
+  summarise(n = n()) %>%
+  arrange(fire_date)
+
+
+# Create point for nonFireArea
+set.seed(123)
+nonFireSamples <- sf::st_sample(nonFireA, 
+                                size = nrow(fireSamples) * 2, 
+                                type = "regular") %>% st_as_sf(.) %>% 
+  
+  dplyr::filter(!rowSums(st_intersects(., allFireA, sparse = F)) > 0) %>% 
+  slice_sample(n = nrow(fireSamples))
+
+
+# Randomly assign fire dates to nonFireSamples
+set.seed(123)  
+nonFireSamples<- nonFireSamples %>%
+  mutate(fire_date = sample(
+    rep(fire_date_counts$fire_date, fire_date_counts$n),
+    size = n(),
+    replace = FALSE
+  )) %>% 
+  mutate(plot_label = "nonFire",
+         fire_id = "non_fire_event",
+         fireYr = lubridate::year(fire_date)) %>% 
+  rename(geom = x)
+
+nonFireSamples
+  
+st_write(nonFireSamples, file.path(analyzed_src, 
+                                "mtbs_fire_data/nonFireSamples.gpkg"), append = F)
+
+```
+
+## 2.5 fireNonFire Plots
+
+```{r}
+# fire samples
+fireSamples <- sf::st_read(file.path(analyzed_src, 
+                                "mtbs_fire_data/fireSamples.gpkg"))
+# nonFire samples
+nonFireSamples <- sf::st_read(file.path(analyzed_src, 
+                                "mtbs_fire_data/nonFireSamples.gpkg"))
+fireSamples;nonFireSamples
+
+
+# Bind fire and nonFire samples by row 
+fireNonFirePlots <- bind_rows(fireSamples, nonFireSamples) %>% 
+  mutate(plotId = paste0(plot_label,1:nrow(.))) %>%
+  dplyr::rename(plotLabel = plot_label,
+                fireDate = fire_date) %>% 
+  dplyr::select(fire_id, plotId, plotLabel, fireDate, fireYr, geom)
+
+table(fireNonFirePlots$plotLabel)
+# ====================================================================================
+
+```
+
+## 2.6 Randomly selecting samples from the lists
+
+```{r samplePlots}
+samplePlots <- fireNonFirePlots %>% 
+  group_by(fireYr, plotLabel) %>%
+  slice_sample(n = 30) %>%
+  ungroup()
+
+
+# Write final samplePlots to the file 
+sf::st_write(samplePlots, 
+             file.path(analyzed_src, "plots/samplePlots.gpkg"),
+             append = F
+             )
+samplePlots
+```
+
+## 2.7 Load Final samplePlots
+
+```{r fireNonFirePlots}
+samplePlots <- sf::st_read(file.path(analyzed_src, filename, "samples.gpkg"))
+
+```
+
+# 3. Climate Variables
+
+## 3.1 Monthly Mean Maximum Temperature
+
+### 3.1.1 Calculate monthly tmmx
+
+```{r}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "tmmx") %>% 
+  pull(Description)
+var_name  
+
+fileSrc <- here::here("external/raw_data/climate_data", "tmmx")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "tmmx", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+# ===========================================================================
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+
+
+```
+
+### 3.1.2 Extract monthly tmmx values to point
+
+```{r tmmx monthly}
+
+tmmxM_dir <- here::here("external/analyzed_data/climate_data", "tmmx", "monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = tmmxM_dir,
+                                           variable = "tmmxM",
+                                           match.column = "fireDate"
+                                           )
+
+samplePlots <- samplePlots %>% mutate(tmmxM = tmmxM - 273.15)
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+```
+
+## 3.2 Monthly Mean Minimum Temperature
+
+### 3.2.1 Calculate monthly tmmn
+
+```{r tmmn monthly}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "tmmn") %>% 
+  pull(Description)
+var_name  
+
+fileSrc <- here::here("external/raw_data/climate_data", "tmmn")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "tmmn", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+# ===========================================================================
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+```
+
+### 3.2.2 Extract monthly tmmn values to points
+
+```{r}
+tmmnM_dir <- here::here("external/analyzed_data/climate_data", "tmmn", "monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = tmmnM_dir,
+                                           variable = "tmmnM",
+                                           match.column = "fireDate"
+                                           )
+samplePlots <- samplePlots %>% mutate(tmmnM = tmmnM - 273.15)
+samplePlots
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+
+```
+
+## 3.3 Monthly Mean Temperature
+
+### 3.3.1 Calculate monthly tmean
+
+```{r tmean monthly}
+tmmnM_dir <- here::here("external/analyzed_data/climate_data", "tmmn", "monthly")
+tmmxM_dir <- here::here("external/analyzed_data/climate_data", "tmmx", "monthly")
+tmmnMList <- dir(tmmnM_dir, pattern = "nc", full.names = T)
+tmmxMList <- dir(tmmxM_dir, pattern = "nc", full.names = T)
+
+outputDir <- here::here("external/analyzed_data/climate_data", "tmean", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+tmeanM <-  calculate_tmeanM(tmmnMList, tmmxMList, outputDir = outputDir)
+
+
+# ===========================================================================
+
+
+```
+
+### 3.3.2 Extract monthly tmean values to points
+
+```{r}
+tmeanM_dir <- here::here("external/analyzed_data/climate_data", "tmean", "monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = tmeanM,
+                                           variable = "tmeanM",
+                                           match.column = "fireDate"
+                                           )
+
+samplePlots
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.4 Precipitation
+
+### 3.4.1 Calculate monthly pr
+
+```{r Precipitation}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "pr") %>% 
+  pull(Description)
+var_name  
+
+fileSrc <- here::here("external/raw_data/climate_data", "pr")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "pr", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+ncdf4::nc_open(fileList[1])
+# ===========================================================================
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+```
+
+### 3.4.2 Extract monthly pr values to points
+
+```{r}
+prM_dir <- here::here("external/analyzed_data/climate_data", "pr", "monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = prM_dir,
+                                           variable = "prM",
+                                           match.column = "fireDate"
+                                           )
+
+samplePlots
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+
+        
+```
+
+## 3.5 PDSI Monthly
+
+### 3.5.1 Download pdsi monthly
+
+```{r}
+basePath <- file.path(here::here("external/raw_data/climate_data"))
+pdsiM <- getPrismDataset("pdsi", 1984, 2023, basePath)
+
+```
+
+### 3.5.2 Extract monthly pdsi values to points
+
+```{r}
+pdsiM_dir <- here::here("external/raw_data/climate_data", "pdsi")
+
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = pdsiM_dir,
+                                           variable = "pdsiM",
+                                           match.column = "fireDate"
+                                           )
+
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+
+```
+
+## 3.6 SC-PDSI Monthly
+
+### 3.6.1 Download scPdsi monthly
+
+```{r}
+basePath <- file.path(here::here("external/raw_data/climate_data"))
+scPdsiM <- getPrismDataset("scpdsi", 1984, 2023, basePath)
+```
+
+### 3.6.2 Extract monthly scPdsi values to points
+
+```{r}
+scPdsiM_dir <- here::here("external/raw_data/climate_data", "scpdsi")
+
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = scPdsiM_dir,
+                                           variable = "scPdsiM",
+                                           match.column = "fireDate"
+                                           )
+
+
+samplePlots
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.7 PZi Monthly
+
+### 3.7.1 Download pzi monthly
+
+```{r}
+basePath <- file.path(here::here("external/raw_data/climate_data"))
+pziM <- getPrismDataset("pzi", 1984, 2023, basePath)
+```
+
+### 3.7.2 Extract monthly pzi values to points
+
+```{r}
+pzIM_dir <- here::here("external/raw_data/climate_data", "pzi")
+
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir =pzIM_dir,
+                                           variable = "pzIM",
+                                           match.column = "fireDate"
+                                           )
+
+
+samplePlots
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.8 vpd Monthly
+
+### 3.8.1 Calculate Monthly vpd from Daily vpd
+
+```{r}
+
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "vpd") %>% 
+  pull(Description)
+  
+fileSrc <- here::here("external/raw_data/climate_data", "vpd")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "vpd/monthly")
+
+# ---------------------------------------------------------------------
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+```
+
+### 3.8.2 Extract vpd value to the points
+
+```{r}
+vpdM_dir <- here("external/analyzed_data/climate_data/vpd/monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = vpdM_dir,
+                                           variable = "vpdM",
+                                           match.column = "fireDate"
+                                           )
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.9 pet Monthly
+
+### 3.9.1 Calculate pet Monthly from daily data
+
+```{r}
+
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "pet") %>% 
+  pull(Description)
+  
+fileSrc <- here::here("external/raw_data/climate_data", "pet")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "pet", "monthly")
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+# ---------------------------------------------------------------------
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+
+```
+
+### 3.9.2 Extract pet monthly values by point
+
+```{r}
+petM_dir <- here("external/analyzed_data/climate_data/pet/monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = petM_dir,
+                                           variable = "petM",
+                                           match.column = "fireDate"
+                                           )
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.10 vs Monthly
+
+### 3.10.1 Calculate vs Monthly from vs Daily
+
+```{r}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "vs") %>% 
+  pull(Description)
+  
+fileSrc <- here::here("external/raw_data/climate_data", "vs")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "vs", "monthly")
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+
+# ---------------------------------------------------------------------
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+```
+
+### 3.10.2 Extract
+
+```{r}
+vsM_dir <- here("external/analyzed_data/climate_data/vs/monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = vsM_dir,
+                                           variable = "vsM",
+                                           match.column = "fireDate"
+                                           )
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.11 rmax monthly
+
+### 3.11.1 Calculate monthly rmax
+
+```{r}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "rmax") %>% 
+  pull(Description)
+  
+fileSrc <- here::here("external/raw_data/climate_data", "rmax")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "rmax", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+# ---------------------------------------------------------------------
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+
+```
+
+### 3.11.2 Extract rmax monthly values by point
+
+```{r}
+rmaxM_dir <- here("external/analyzed_data/climate_data/rmax/monthly")
+
+samplePlots <- extractValue2Points(samplePlots, 
+                                           rastDir = rmaxM_dir,
+                                           variable = "rmaxM",
+                                           match.column = "fireDate"
+                                           )
+      
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+samplePlots
+```
+
+## 3.12 rmin Monthly
+
+```{r}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "rmin") %>% 
+  pull(Description)
+var_name  
+fileSrc <- here::here("external/raw_data/climate_data", "rmin")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "rmin", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+
+# ---------------------------------------------------------------------
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+
+
+```
+
+### 3.12.2 Extract rmin monthly values to point
+
+```{r}
+rminM_dir <- here("external/analyzed_data/climate_data/rmin/monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = rminM_dir,
+                                           variable = "rminM",
+                                           match.column = "fireDate"
+                                           )
+
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 3.13 srad Monthly
+
+### 3.13.1 Calculate srad Monthly from daily srad data
+
+```{r}
+var_name <- getGridmet.metadata() %>% 
+  dplyr::filter(variable == "srad") %>% 
+  pull(Description)
+var_name  
+fileSrc <- here::here("external/raw_data/climate_data", "srad")
+fileList <- dir(fileSrc, pattern = "nc", full.names = T)
+outputDir <- here::here("external/analyzed_data/climate_data", "srad", "monthly")
+
+if(!dir.exists(outputDir)){
+  dir.create(outputDir)
+}
+
+# ===========================================================================
+future::plan("multisession", workers = 4L)
+
+# Create progress handler
+progressr::handlers(global = T)
+progressr::handlers("progress")
+progressr::with_progress({
+  p <- progressr::progressor(along = fileList)
+  
+  result <- future.apply::future_lapply(fileList, function(fl) {
+     
+        gridmetDaily2Monthly(fl, var_name, outputDir) 
+      
+        p()
+     })
+  })
+future::plan("sequential", .cleanup = T)
+
+```
+
+### 3.13.2 Extract srad monthly values to points
+
+```{r}
+sradM_dir <- here("external/analyzed_data/climate_data/srad/monthly")
+
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                           rastDir = sradM_dir,
+                                           variable = "sradM",
+                                           match.column = "fireDate"
+                                           )
+
+samplePlots
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+# 4. Topographic Variables
+
+## 4.1 Elevation
+
+```{r}
+# DEM
+dem_30m <- file.path(raw_src,"topo_data/LF2020_Elev_220_CONUS/LF2020_Elev_220_CONUS/Tif/LC20_Elev_220.tif")
+
+samplePlots
+
+# Extract Elevation Data
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                    rastDir = dem_30m, 
+                                    variable = "elev30M", match.column = F)
+
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 4.2 Slope
+
+```{r}
+#  Slope
+slope_30M <- file.path(raw_src,"topo_data/LF2020_SlpD_220_CONUS/LF2020_SlpD_220_CONUS/Tif/LC20_SlpD_220.tif")
+
+# Extract Slope Data
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                    rastDir = slope_30M, 
+                                    variable = "slpD30M", match.column = F)
+
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 4.3 Aspect
+
+```{r}
+# Aspect
+aspect_30m <- file.path(raw_src,"topo_data/LF2020_Asp_220_CONUS/LF2020_Asp_220_CONUS/Tif/LC20_Asp_220.tif")
+
+# Extract Aspect Data
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                    rastDir = aspect_30m, 
+                                    variable = "aspD30M", match.column = F)
+
+
+st_write(samplePlots, 
+        file.path(plots_src, "samplePlots.gpkg"), append = FALSE)
+samplePlots
+```
+
+## 4.4 TPI
+
+```{r}
+tpi_conus <- file.path(analyzed_src,"topographic/tpi30m.tif")
+
+
+# Extract TPI Data
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                    rastDir = tpi_conus, 
+                                    variable = "tpi", match.column = F)
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+table(is.na(samplePlots$tpi))
+```
+
+## 4.5 TWI
+
+```{r}
+twi_conus <- file.path(analyzed_src,"topographic/twi_30m.tif")
+file.exists(twi_conus)
+samplePlots <- extractValue2Points(pointFeature = samplePlots, 
+                                    rastDir = twi_conus, 
+                                    variable = "twi", match.column = F)
+
+
+
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+```
+
+# 5. Burn Severity
+
+The severity classes are:
+
+0: Background;
+
+1: Unburned to Low; 2: Low; 3: Moderate; 4: High; 5: Increased Greenness;
+
+6: Non-Processing Area Mask
+
+## 5.1 Extract all TIF files into one directory
+```{r}
+
+# Set paths
+source_dir <- here("external/raw_data/mtbs_fire_data/Fire_data_bundles/composite_data/MTBS_BSmosaics")
+output_dir <- here("external/raw_data/mtbs_fire_data/burnSeverity_tifs")  
+
+# Create output directory if it doesn't exist
+dir.create(output_dir, showWarnings = FALSE, recursive = TRUE)
+
+# List all zip files recursively
+zip_files <- list.files(path = source_dir, 
+                       pattern = "mtbs_CONUS_.*\\.zip$", 
+                       recursive = TRUE,
+                       full.names = TRUE)
+
+# Function to extract tif from zip
+extract_tif <- function(zip_path, out_dir) {
+  tryCatch({
+    # Create a temporary directory
+    temp_dir <- tempdir()
+    
+    # Unzip to temp directory
+    unzip(zip_path, exdir = temp_dir)
+    
+    # Find the .tif file
+    tif_file <- list.files(temp_dir, 
+                          pattern = "\\.tif$", 
+                          recursive = TRUE, 
+                          full.names = TRUE)
+    
+    # Move tif file to output directory
+    if(length(tif_file) > 0) {
+      file.copy(tif_file, 
+                file.path(out_dir, basename(tif_file)), 
+                overwrite = TRUE)
+    }
+    
+    # Clean up temp directory
+    unlink(temp_dir, recursive = TRUE)
+  }, error = function(e) {
+    message("Error processing ", zip_path, ": ", e$message)
+  })
+}
+
+# Process all zip files
+for(zip_file in zip_files) {
+  message("Processing: ", basename(zip_file))
+  extract_tif(zip_file, output_dir)
+}
+
+
+```
+
+## 5.2 Masking and Reprojecting burnSeverity
+```{r}
+# Masking 
+rawMtbsI_src <- dir(file.path("external/raw_data/mtbs_fire_data/burnSeverity_tifs"), pattern = ".tif", full.names = T)
+output_src <- file.path(analyzed_src, "mtbs_fire_data/mtbs_severity")
+
+# Transform to crs of raster data 
+vecConusStates <- st_transform(conusStates, st_crs(rast(rawMtbsI_src[40])))
+
+# clip burn severity
+raster_clip(rawMtbsI_src[40], vecConusStates, output_src)
+
+# Western CONUS burn severity raster data
+conusMtbsI_src <- dir(file.path(analyzed_src, "mtbs_fire_data/mtbs_severity"), pattern = ".tif", full.names = T)
+
+# Reproject fire severity raster for 2023
+mtbs_CONUS_2023 <- project(rast(conusMtbsI_src[40], "EPSG:5070"))
+
+# Write a raster to the file
+writeRaster(mtbs_CONUS_2023, file.path(conusMtbsI_src, "conus_epsg5070", "mtbs_CONUS_2023.tif"))
+
+
+
+
+
+
+```
+
+
+# 6. Edaphic factors
+
+## 6.1 Available water capacity
+
+```{r}
+# Load awc dataset
+awcDir <- dir(here::here("external/raw_data/topo_data/awc_gNATSGO/awc_gNATSGO"),
+              pattern = ".tif$", full.names = T)
+
+# Extract the data to the points
+samplePlots <- extractValue2Points(samplePlots, awcDir, variable = "awC")
+
+# Write a samplePlots object to the file
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+```
+
+## 6.2 Field Capacity
+
+```{r}
+# Load fc dataset
+fcDir <- dir(here::here("external/raw_data/topo_data/fc_gNATSGO/fc_gNATSGO"),
+              pattern = ".tif$", full.names = T)
+
+# Extract the data to the points
+samplePlots <- extractValue2Points(samplePlots, fcDir, variable = "fC")
+
+# Write a samplePlots object to the file
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+## 6.3 Soil porosity
+
+```{r}
+# Load awc dataset
+porDir <- dir(here::here("external/raw_data/topo_data/por_gNATSGO/por_gNATSGO"),
+              pattern = ".tif$", full.names = T)
+
+# Extract the data to the points
+samplePlots <- extractValue2Points(samplePlots, porDir, variable = "por")
+
+# Write a samplePlots object to the file
+st_write(samplePlots, 
+         file.path(plots_src, "samplePlots.gpkg"),
+         append = F)
+
+samplePlots
+```
+
+# 7. Tree Canopy Cover
+
+The USFS Forest Inventory and Analysis (FIA) program photo-interpreted percent tree canopy cover (TCC) response data. Photointerpretation (PI) measured TCC using a custom ArcGIS plug-in tool (Goeking et al., 2012) from 105-point grids placed in 90x90 squares centered on USFS FIA plot design. A total of 55,242 PI plots were used in TCC modeling.
+
+```         
+https://doi.org/10.1016/j.isprsjprs.2018.09.006
+```
+
+```{r}
+# Load PTCC dataset
+treePcc_Src <- dir(here::here("external/raw_data/treecanopy_database"), 
+                  pattern = ".tif$", full.names = T)
+
+# Extract the data to the points
+samplePlots <- extractValue2Points(samplePlots, treePcc_Src, variable = "treePcc")
+
+
+# Write a samplePlots object to the file
+st_write(samplePlots, 
+         file.path(aplots_src, "samplePlots.gpkg"),
+         append = F)
+```
+
+# 8. Statistical Analysis
+
+## 8.1 Disturbance Classes
+
+```{r}
+outbreak_lodgepole
+
+```
+
+# 9. Modeling
+
+## 9.1 Load samplePlots
+
+```{r}
+# Load fire NonFire plots as samplePlots 
+samplePlots <- st_read(here::here("external/analyzed_data/plots/samplePlots.gpkg")) 
+
+samplePlots <- samplePlots %>% mutate(fireYrs = lubridate::year(fireDate))
+samplePlots
+
+# Total number of observations is 77062.
+samplePlots <- samplePlots %>%
+  mutate(FNF = case_when(
+           plotLabel == "fire" ~ "1",
+           plotLabel == "nonfire" ~ "0"
+         )) %>% 
+  create.timeclass(., "fireYear", 1984, 2023, 10, "fire") %>% 
+  st_transform("epsg:5070")
+
+```
+
+## 9.2 Outbreak and Fuel Info
+
+```{R}        
+samplePlots <- samplePlots %>%  mutate(
+    fuel = as.numeric(strata == "fireFuel"),
+    outbreak = as.numeric(strata == "fireOutbreak"),
+    outbreakFuel = as.numeric(strata == "fireOutbreakFuel")
+  )
+
+samplePlots1 <- samplePlots %>% 
+  # Update outbreak based on intersection
+  mutate(outbreak =  if_else(
+    outbreak == 0 & lengths(st_intersects(., outbreakLodgepole)) > 0, 1, 0)
+    )
+  samplePlots1 %>% filter(plotLabel == "nonFire" & outbreak == 1)
+  table(samplePlots$outbreak)
+  # )) %>%
+  # # Update fuel based on intersection
+  # mutate(fuel = case_when(
+  #   to_update & lengths(st_intersects(., fuelLodgepole)) > 0 ~ 1,
+  #   TRUE ~ fuel
+  # )) %>%
+  # # Remove the temporary flag
+  # select(-to_update)
+
+
+
+st_crs(outbreakLodgepole)
+st_crs(samplePlots)
+
+samplePlots
+
+# Write a samplePlots object to the file
+st_write(samplePlots, 
+         file.path(analyzed_src, "plots/samplePlots.gpkg"),
+         append = F)
+```
+
+
+## 9.4 Pre-processing the dataset
+
+## 9.5 Selecting predictors
+
+```{r Spliting dataset}
+# All numerical features from samplePlots
+corrCol <- c("mtbsI", "tmmxM", "tmmnM", "prM", "pdsiM",  "scPdsiM", "pzIM", "vpdM",  
+"petM", "vsM", "rmaxM", "rminM", "sradM", "elev30M", "slpD30M", "aspD30M",  "awC", "tpi", "fuel", "outbreak", "outbreakFuel")
+
+# Coorelation plot
+corrPlot(samplePlots, corrCol)
+colnames(samplePlots)
+
+# Target variable for fire and fire severity
+facCol <- c("plotLabel", "severity")
+dependentVar <- c("FNF", "mtbsI")
+
+numCol <- c( "tmmxM", "prM", "pdsiM",  "vpdM", 
+"petM", "vsM", "sradM", "elev30M", 
+"slpD30M", "aspD30M",  "awC", "tpi")
+
+colList <- c(facCol, numCol)
+colList
+
+table(samplePlots$strata)
+cor_matrix <- cor(samplePlots %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::select(all_of(corrCol)) %>% 
+  mutate(across(all_of(numCol), as.numeric)) %>% 
+  as.data.table())
+
+cor_matrix
+high_cor <- findCorrelation(cor_matrix, cutoff = 0.75)
+X_filtered <- X[, -high_cor]
+
+```
+
+### 9.5.1 Splitting the dataset for training and testing Models
+
+```{r Final Dataset}
+data <- samplePlots %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::select(all_of(colList)) %>% 
+  mutate(across(all_of(facCol), as.factor)) %>% 
+  mutate(across(all_of(numCol), as.numeric)) %>% 
+  as.data.table()  %>% 
+  .[, (numCol) := lapply(.SD, nafill, type = "locf"), .SDcols = numCol]
+
+
+  
+# Dataset for fire nonfire
+data_FNF <- data %>% 
+  dplyr::select(plotLabel, all_of(numCol))
+str(data_FNF)
+
+# write.csv(data_FNF, here::here("data/samples/data_FNF.csv"))
+
+# Dataset for mtbsI
+data_mtbsI <- data %>% 
+  dplyr::select(severity, all_of(numCol), -plotLabel)
+
+
+
+
+str(data_mtbsI)
+# write.csv(data_mtbsI, here::here("data/samples/data_mtbsI.csv"))
+
+```
+
+### 9.5.2 Spliting the datasets
+
+```{r}
+
+# Dataset summary
+nrow(data_FNF); table(data_FNF$plotLabel)
+nrow(data_mtbsI); table(data_mtbsI$mtbsI)
+
+# Split the data into training and testing sets
+set.seed(246)
+sample_FNF <- sample.int(n = nrow(data_FNF), size = floor(.60*nrow(data_FNF)), replace = F)
+sample_mtbsi <- sample.int(n = nrow(data_mtbsI), size = floor(.60*nrow(data_mtbsI)), replace = F)
+
+train_data_FNF <- data_FNF[sample_FNF, ]
+test_data_FNF  <- data_FNF[-sample_FNF,]
+
+train_data_mtbsi <- data_mtbsI[sample_mtbsi, ]
+test_data_mtbsi  <- data_mtbsI[-sample_mtbsi, ]
+str(train_data_FNF)
+str(train_data_mtbsi)
+```
+
+### 9.5.3 Handling predictors and response for XGBoost model
+
+```{r}
+missing_pred <- colSums(is.na(data_FNF[, ..numCol]))
+missing_pred
+  
+missing_target <- sum(is.na(data_FNF[["plotLabel"]]))
+missing_target
+
+
+missing_pred <- colSums(is.na(data_mtbsI[, ..numCol]))
+missing_pred
+  
+missing_target <- sum(is.na(data_mtbsI[["severity"]]))
+missing_target
+
+```
+
+## 9.6 RandomForest Model
+
+```{r}
+library(randomForest)
+library(caret)
+library(doParallel)
+
+# Setup parallel processing
+registerDoParallel(cores = 4)
+
+# Create formula
+formFire <- as.formula(paste("event", "~", paste(numCol,  collapse = " + ")))
+
+# Set up train control for repeated CV
+ctrl <- trainControl(
+  method = "repeatedcv",
+  number = 10,
+  repeats = 5,
+  allowParallel = TRUE,
+  savePredictions = "final",
+  returnResamp = "all"
+)
+
+# Train Random Forest using caret for CV
+rf_cv <- train(
+  formFire,
+  data = train_data_FNF,
+  method = "rf",
+  trControl = ctrl,
+  ntree = 2000,
+  importance = TRUE
+)
+
+print(rf_cv)
+
+# ====================================================================================
+# Fire Severity
+# ====================================================================================
+formSeverity <- as.formula(paste("severity", "~", paste(numCol, collapse = " + ")))
+# Train Random Forest using caret for CV
+rf_cv_mtbsi <- train(
+  formSeverity,
+  data = train_data_mtbsi,
+  method = "rf",
+  trControl = ctrl,
+  ntree = 2000,
+  importance = TRUE
+)
+
+
+
+print(rf_model_mtbsi)
+
+# ====================================================================================
+caret::varImp(rf_cv)
+
+# Make predictions on the test dataset
+pred_model_FNF <- predict(rf_cv, newdata = test_data_FNF[,-1])
+pred_model_severity <-  predict(rf_cv_mtbsi, newdata = test_data_mtbsi[,-1])
+
+
+
+# Calculate the confusion matrix
+conf_matrix_FNF <- confusionMatrix(pred_model_FNF, as.factor(test_data_FNF$plotLabel))
+conf_matrix_FNF
+conf_matrix_mtbsi <- confusionMatrix(pred_model_severity, as.factor(test_data_mtbsi$severity))
+conf_matrix_mtbsi
+
+# Plot the Random Forest model performance
+plot(rf_cv, main = "Model performance of RandomForest model for fire")
+
+plot(rf_cv_mtbsi, main = "Model performance of RandomForest model for fire severity")
+
+
+
+# Plot the importance of variables
+important_variables <- varImp(rf_cv, scale = T)
+plot_a <- plot(important_variables, 
+     type = "p", 
+     main = "Feature importance plot using RF model for predicting Fire",
+     ylab = "Features")
+
+
+important_variables_mtbsi <- varImp(rf_cv_mtbsi, scale = T)
+plot_b <- plot(important_variables_mtbsi, 
+     type = "p", 
+     main = "Feature importance plot using RF model for predicting Fire Severity",
+     ylab = "Features")
+
+# ====================================================================================
+
+plot_a
+# Save the plot
+ggsave(file.path(fig_src, "figure5.png"), plot_a, 
+       width = 7, height = 6, dpi = 300)
+
+ggsave(file.path(fig_src, "figure6.png"), plot_b, 
+       width = 7, height = 6, dpi = 300)
+```
+
+## MDS plot
+
+```{r}
+# Get proximity matrix
+prox_matrix <- rf_model$proximity
+
+# Convert proximity to distance
+dist_matrix <- sqrt(1 - prox_matrix)
+
+# Perform MDS on distance matrix
+mds <- cmdscale(dist_matrix, k = 2)
+
+# Create visualization dataset
+viz_data <- data.frame(
+  MDS1 = mds[,1],
+  MDS2 = mds[,2],
+  Class = train_data_FNF[[target_var]]
+)
+
+# Create separability plot
+sep_plot <- ggplot(viz_data, aes(x = MDS1, y = MDS2, color = Class)) +
+  geom_point(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Random Forest Proximity-based Class Separability",
+    x = "MDS Dimension 1",
+    y = "MDS Dimension 2"
+  )
+
+# Calculate CV performance metrics
+cv_results <- rf_cv$results
+cv_resamples <- rf_cv$resample
+
+# Calculate separability metrics
+within_class_dist <- list()
+between_class_dist <- list()
+classes <- unique(data[[target_var]])
+
+for(class in classes) {
+  class_indices <- which(train_data_FNF[[target_var]] == class)
+  within_class_dist[[as.character(class)]] <- mean(dist_matrix[class_indices, class_indices])
+  
+  other_indices <- which(train_data_FNF[[target_var]] != class)
+  between_class_dist[[as.character(class)]] <- mean(dist_matrix[class_indices, other_indices])
+}
+
+# Calculate average separability ratio
+separability_ratio <- mean(unlist(between_class_dist)) / mean(unlist(within_class_dist))
+
+# Return results
+list(
+  cv_model = rf_cv,
+  final_model = rf_model,
+  cv_results = cv_results,
+  cv_resamples = cv_resamples,
+  proximity_matrix = prox_matrix,
+  distance_matrix = dist_matrix,
+  mds_coords = mds,
+  separability_plot = sep_plot,
+  within_class_distances = within_class_dist,
+  between_class_distances = between_class_dist,
+  separability_ratio = separability_ratio
+)
+```
+
+## Modelling
+
+```{r}
+
+```
+
+### 9.6.1 Fire occurrence as response variable
+
+```{r Random Forest}
+library(doParallel)
+library(caret)
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+
+# Define the control for cross-validation
+train_control <- trainControl(method = "repeatedcv", 
+                              number = 10, 
+                              repeats = 5,
+                              allowParallel = T,
+                              )
+
+
+mtry_grid_FNF <- expand.grid(mtry = c(2, 3, 4, 5, 7, 8))
+
+
+# Train the random forest model
+set.seed(123)
+fnfModel_RF <- train(plotLabel ~ .,
+                            data = train_data_FNF, 
+                            method = "rf", 
+                            trControl = train_control,
+                            tuneGrid = mtry_grid_FNF,
+                            ntree = 2000,
+                            importance = T,
+                     proximity = T
+                            
+                            )
+
+stopCluster(cl)
+
+
+
+# Save RF_model
+saveRDS(fnfModel_RF, file.path(analyzed_src, "RandomForest/fnfModel_RF_1.rds"))
+saveRDS(fnfModel_RF, file.path(analyzed_src, "RandomForest/fnfModel_RF_2.rds"))
+saveRDS(fnfModel_RF, file.path(analyzed_src, "RandomForest/fnfModel_RF_3.rds"))
+saveRDS(fnfModel_RF, file.path(analyzed_src, "RandomForest/fnfModel_RF_4.rds"))
+saveRDS(fnfModel_RF, file.path(analyzed_src, "RandomForest/fnfModel_RF_5.rds"))
+# Print model
+print(fnfModel_RF)
+
+# Load save model
+fnfModel_RF <- readRDS(file.path(here("external/analyzed_data/RandomForest/fnfModel_RF_3.rds")))
+
+# Make predictions on the test dataset
+pred_model_FNF <- predict(fnfModel_RF, newdata = test_data_FNF[,-1])
+
+# Calculate the confusion matrix
+conf_matrix_FNF <- confusionMatrix(pred_model_FNF, as.factor(test_data_FNF$plotLabel))
+conf_matrix_FNF
+
+# Plot the Random Forest model performance
+plot(fnfModel_RF, main = "Model performance of RandomForest model for fire")
+
+
+# Plot the importance of variables
+important_variables <- varImp(fnfModel_RF, scale = T)
+plot(important_variables, 
+     type = "p", 
+     main = "Feature importance plot using RF model for predicting Fire",
+     ylab = "Features")
+
+```
+
+### 9.6.2 Fire severity as the response variable
+
+```{r}
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+mtry_grid_mtbsi <- expand.grid(mtry = c(2, 3, 4, 5, 7, 8))
+ 
+
+# Define the control for cross-validation
+train_control <- trainControl(method = "repeatedcv", 
+                              number = 10, 
+                              repeats = 5, 
+                              allowParallel = T)
+
+set.seed(589)
+mtbsiModel_RF <- train(severity ~ .,
+                   data = train_data_mtbsi, 
+                   method = "rf", 
+                   trControl = train_control,
+                   tuneGrid = mtry_grid_mtbsi,
+                   ntree = 2000,
+                   importance = T)
+
+stopCluster(cl)
+
+# Save RF_model
+saveRDS(mtbsiModel_RF, file.path(analyzed_src, "RandomForest/mtbsiModel_RF.rds"))
+saveRDS(mtbsiModel_RF, file.path(analyzed_src, "RandomForest/mtbsiModel_RF_2.rds"))
+saveRDS(mtbsiModel_RF, file.path(analyzed_src, "RandomForest/mtbsiModel_RF_3.rds"))
+
+# ================================================================
+# Load save model
+mtbsiModel_RF <- readRDS(file.path(here("external/analyzed_data/RandomForest/mtbsiModel_RF_2.rds")))
+
+
+# Print model
+print(mtbsiModel_RF)
+
+
+# Make predictions on the test dataset
+pred_model_mtbsi <- predict(mtbsiModel_RF, newdata = test_data_mtbsi[,-1])
+
+# Calculate the confusion matrix
+conf_matrix_mtbsi <- confusionMatrix(pred_model_mtbsi, as.factor(test_data_mtbsi$severity))
+
+
+# Plot the Random Forest model performance
+plot(mtbsiModel_RF, main = "Model performance of RandomForest model for fire severity")
+
+
+# Plot the importance of variables
+important_variables_mtbsi <- varImp(mtbsiModel_RF, scale = T)
+plot(important_variables_mtbsi, 
+     type = "p", 
+     main = "Feature importance plot using RF model for predicting fire severity",
+     ylab = "Features")
+```
+
+## 9.7 XgBoost Modelling
+
+### 9.7.1 xgboost modeling for predicting fire
+
+```{r XGBoost for fire prediction}
+library(xgboost)
+library(caret)
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+# Set up training control
+train_control <- trainControl(
+    method = "repeatedcv",
+    number = 10,
+    repeats = 5,
+    verboseIter = TRUE,
+    allowParallel = TRUE,
+    classProbs = TRUE,
+)
+  
+
+# Create more focused parameter grid based on typical ranges
+tuneGrid <- expand.grid(
+    nrounds = 3000,  
+    max_depth = c(3, 5, 7),  # Common effective depths
+    eta = 0.01,  # Learning rate options
+    gamma = c(0, 0.1, 0.3),  # Tree complexity penalty
+    colsample_bytree = c(0.8, 0.9, 1.0),  # Feature sampling
+    min_child_weight = c(1, 3, 5),  # Minimum sum of instance weight
+    subsample = c(0.8, 0.9, 1.0)  # Row sampling
+)
+
+
+train_data_FNF <- as.data.frame(train_data_FNF)
+train_data_FNF
+# Train model with progress printing
+set.seed(42)  # For reproducibility
+XGBmodel <- train(
+    x = train_data_FNF[, predictors3],
+    y = train_data_FNF[[targetFNF]],
+    method = "xgbTree",
+    trControl = train_control,
+    tuneGrid = tuneGrid,
+    metric = "Accuracy",
+    verbose = TRUE,
+    nthread = 1)
+
+# Clean up parallel cluster
+stopCluster(cl)
+
+
+# Print best parameters and performance
+print(XGBmodel$bestTune)
+print(max(XGBmodel$results$Accuracy))
+
+# Save model for later use
+saveRDS(XGBmodel, "XGBmodel_final.rds")
+saveRDS(XGBmodel, "XGBmodel_final_3.rds")
+
+
+# Load save model
+XGBmodel <- readRDS(file.path(here("XGBmodel_final_3.rds")))
+XGBmodel
+
+
+
+# Make new predictions
+xgbpred <- predict(XGBmodel, newdata = test_data_FNF)
+
+predictions_df <- data.frame(
+  predicted_values = xgbpred)
+predictions_df
+
+# Classification metrics
+confusion_matrix <- confusionMatrix(xgbpred, test_data_FNF[[targetFNF]])
+performance <- list(
+  confusion_matrix = confusion_matrix,
+  accuracy = confusion_matrix$overall["Accuracy"],
+  kappa = confusion_matrix$overall["Kappa"]
+)
+
+
+# Get variable importance
+importance <- varImp(XGBmodel)$importance
+importance$Features <- rownames(importance)
+
+importance
+
+# Plot the importance of variables
+ggplot(importance, aes(x = reorder(Features, Overall), y = Overall)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Feature Importance Plot using XGBoost model for predicting Fire",
+    x = "Features",
+    y = "Importance %"
+  )
+
+
+
+# Prepare final results
+results <- list(
+  model = XGBmodel,
+  performance = performance,
+  importance = importance,
+  predictions = predictions_df,
+  actual = test_data_FNF[[targetFNF]],
+  train_data = train_data_FNF,
+  test_data = test_data_FNF,
+  best_tune = XGBmodel$bestTune
+)
+
+
+results
+```
+
+### 9.7.2 xgboost modeling for predicting fire severity
+
+```{r XGBoost for fire severity}
+library(xgboost)
+library(caret)
+
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+# Set up training control
+train_control <- trainControl(
+    method = "repeatedcv",
+    number = 10,
+    repeats = 5,
+    verboseIter = TRUE,
+    allowParallel = TRUE,
+    classProbs = TRUE,
+)
+  
+
+# Create more focused parameter grid based on typical ranges
+tuneGrid <- expand.grid(
+    nrounds = 3000,  
+    max_depth = 5,  # Common effective depths
+    eta = 0.01,  # Learning rate options
+    gamma =  0.3,  # Tree complexity penalty
+    colsample_bytree = 0.8,  # Feature sampling
+    min_child_weight = 1,  # Minimum sum of instance weight
+    subsample = 1.0 # Row sampling
+)
+
+
+train_data_mtbsi <- as.data.frame(train_data_mtbsi)
+train_data_mtbsi
+# Train model with progress printing
+set.seed(42)  # For reproducibility
+XGBmodel <- train(
+    x = train_data_FNF[, predictors],
+    y = train_data_FNF[[targetFNF]],
+    method = "xgbTree",
+    trControl = train_control,
+    tuneGrid = tuneGrid,
+    metric = "Accuracy",
+    verbose = TRUE,
+    nthread = 1)
+
+# Clean up parallel cluster
+stopCluster(cl)
+
+
+# Print best parameters and performance
+print(XGBmodel$bestTune)
+print(max(XGBmodel$results$Accuracy))
+
+# Save model for later use
+saveRDS(XGBmodel, file.path(analyzed_src, "xgboost/fireSeverity_Prediction.rds"))
+
+XGBmodel
+
+# Make new predictions
+xgbpred <- predict(XGBmodel, newdata = test_data_FNF)
+
+predictions_df <- data.frame(
+  predicted_values = xgbpred)
+predictions_df
+
+# Classification metrics
+confusion_matrix <- confusionMatrix(xgbpred, test_data_FNF[[targetFNF]])
+performance <- list(
+  confusion_matrix = confusion_matrix,
+  accuracy = confusion_matrix$overall["Accuracy"],
+  kappa = confusion_matrix$overall["Kappa"]
+)
+
+
+# Get variable importance
+importance <- varImp(XGBmodel)$importance
+importance$Features <- rownames(importance)
+
+importance
+
+# Plot the importance of variables
+ggplot(importance, aes(x = reorder(Features, Overall), y = Overall)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = "Feature Importance Plot using XGBoost model for predicting Fire",
+    x = "Features",
+    y = "Importance %"
+  )
+
+
+
+# Prepare final results
+results <- list(
+  model = XGBmodel,
+  performance = performance,
+  importance = importance,
+  predictions = predictions_df,
+  actual = test_data_FNF[[targetFNF]],
+  train_data = train_data_FNF,
+  test_data = test_data_FNF,
+  best_tune = XGBmodel$bestTune
+)
+
+
+
+```
+
+### 
+
+## 9.8 GAM model
+
+```{r GAM model}
+library(mgcv)
+cl <- makeCluster(4)
+registerDoParallel(cl)
+
+
+# Define the control for cross-validation
+train_control <- trainControl(method = "repeatedcv",
+                            number = 10,
+                            repeats = 5,
+                            allowParallel = T)
+
+# Define tuning grid for GAM
+# Adjust select and bs parameters based on your features
+gam_grid <- expand.grid(
+    select = c(T, F),
+    method = "GCV.Cp",
+    bs = "tp"  # thin plate regression splines
+)
+
+# Train the GAM model
+set.seed(123)
+gam_model <- train(plotLabel ~ .,
+                  data = train_data_FNF,
+                  method = "gam",
+                  trControl = train_control,
+                  tuneGrid = gam_grid,
+                  family = binomial(link = "logit"))  # adjust family based on your response variable
+
+stopCluster(cl)
+  
+```
+
+```{r}
+library(data.table)
+outbreakDT <- as.data.table(outbreak_lodgepole)
+
+```
