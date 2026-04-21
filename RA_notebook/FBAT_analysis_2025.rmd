@@ -1,25 +1,29 @@
 ---
 title: "fbat plot data analysis 2025"
-output: github_document
+author: "S. Paudel"
+date: "2025-11-28"
+output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Libraries    
+## Libraries  
+
 ```{r}
-# if !installed.packages("pak") {
-#   install.packages("pak")
-# }
-# pak::pak("https://github.com/paudelsushil/Rfuels")
+if (!requireNamespace("pak", quietly = TRUE)) {
+  install.packages("pak")
+}
+pak::pak("https://github.com/paudelsushil/Rfuels")
 
 # Local package is installed from this repo (forestPluse)
-install.packages("forestPluse_2.1.0.tar.gz", repos = NULL, type = "source")
-library(forestPluse)
+install.packages("forestPluse_0.1.8.tar.gz", repos = NULL, type = "source")
 
 
-libs <- c("terra", "dplyr", "ggplot2", "readr", "tidyr", "lubridate", "stringr", "sf", "readxl", "here", "Rfuels", "forestPluse")
+libs <- c("terra", "dplyr", "ggplot2", "readr", "tidyr", "lubridate", "stringr", "sf", "readxl", "here", "Rfuels", "forestPulse")
 
 lapply(libs, library, character.only = TRUE)
 
@@ -30,6 +34,7 @@ lapply(libs, library, character.only = TRUE)
 
 
 # setup working direcotories and data sources
+
 ```{r}
 # Set base directory
 base_dir <- r"(D:\Clark University\Dominik Kulakowski - Sushil\Datasets\data_Rfabt_repo)"
@@ -64,6 +69,7 @@ topo_data_dir <- file.path(analyzed_data_src, "topographic_data")
 
 
 # 1. Complining and compairing coordinates from different gpx waypoints files
+
 ```{r}
 raw_gps_dir <- file.path(base_dir, "GPS_data_backup", "Garmin GPSMAP 65", "Garmin", "GPX")
 
@@ -151,6 +157,7 @@ writexl::write_xlsx(fbat_gps_wpts_final,
 
 
 # Make a track of navigation through all measured FBAT plots in 2025
+
 ```{r}
 track_dir <- file.path(base_dir, "GPS_data_backup", "Garmin GPSMAP 65", "Garmin", "GPX", "Archive")
 track_files <- list.files(track_dir, pattern = "^2025.*\\Auto.gpx$", full.names = TRUE)
@@ -170,6 +177,7 @@ sf::st_write(track_data, file.path(base_dir, "data", "GPS_data_backup", "compile
 
 
 # Final FBAT plot GPS coordinates for 2025
+
 ```{r}
 fbat_plots <- read_excel(file.path(base_dir, "data", "analyzed_data", "fbat_plots_original.xls"))
 names(fbat_plots             )
@@ -190,6 +198,7 @@ View(fbat_plots_sf)
 
 
 # Extract orthophotos from drone data zip files
+
 ```{r}
 zip_src <- "I:/Drone_data_analysis_2025"
 outpur_dir <- "I:/Drone_data_analysis_2025/drone_Orthophotos"
@@ -206,6 +215,7 @@ extract_and_rename_tifs(
 ```
 
 # Extract ndvi tif from drone data zip files
+
 ```{r}
 
 ```
@@ -264,6 +274,7 @@ View(fbat_fuel_depths_with_coords)
 ```
 
 ## Data exploration
+
 ```{r}
 # species code reference
 species_codes <- read_excel("data\\v9-5_2024-10_Natl_MasterTreeSpeciesList.xlsx")
@@ -285,6 +296,7 @@ fbat_measured_ipad_2025 <- data.frame(
 ```
 
 ## Calculations suggested by Brown 1974
+
 ```{r}
 # Slope correction function
 slope_correction <- function(slope){
@@ -314,6 +326,7 @@ slope_correction(30) # example usage
 ```     
 
 ## Calculate plot wise canopy density
+
 ```{r}
 
 crwonDensity <- calculate_crownDensity(df = fbat_crown_cover)
@@ -322,6 +335,7 @@ crwonDensity <- calculate_crownDensity(df = fbat_crown_cover)
 ```
 
 ## Calculate plot wise basal area, QMD, SDI
+
 ```{r}
 # Basal area per plot and species
 fbat_trees <- fbat_tree_measurement |> 
@@ -538,6 +552,161 @@ View(tree_measurement_combined)
 
 ```
 
+
+# Preparing crown cover data for analysis
+```{r}
+# Crown cover data from iPads Pro
+crown_cover_ipadsPro <- read.csv(file.path(base_dir, "data/iPad Pro data/crown_cover_pro.csv")) |> 
+                        select(FBAT_plot_id, direction, distance_0m, distance_7_7m, distance_15_24m, canopy_density_comment) |> 
+                        filter(!is.na(FBAT_plot_id)) |> 
+                        mutate(
+                          azimuth = case_when(
+                            direction == "N"   ~ 0,
+                            direction == "E"  ~ 90,
+                            direction == "S" ~ 180,
+                            direction == "W" ~ 270)
+                        )
+
+View(crown_cover_ipadsPro)
+
+# Crown cover data from Sushil's iPad
+crown_cover_Myipad <- read.csv(file.path(base_dir, "data/Sushil's iPad/crown_cover_sp.csv")) |> 
+                      select(FBAT_plot_id, direction, distance_0m, distance_7_7m, distance_15_24m, canopy_density_comment) |> 
+                      filter(!is.na(FBAT_plot_id)) |> 
+                      mutate(
+                          azimuth = case_when(
+                            direction == "N"   ~ 0,
+                            direction == "E"  ~ 90,
+                            direction == "S" ~ 180,
+                            direction == "W" ~ 270)
+                        )
+
+View(crown_cover_Myipad)
+
+# Crown cover data from data sheets
+crown_cover_datasheets <- read_excel(file.path(base_dir, "data/FBAT_plot_data_2025.xlsx"),
+                                      sheet = "canopy_density") |> 
+                                      select(FBAT_plot_id, directions, distance_0m, distance_7_7m, distance_15_24m, canopy_density_comment) |> 
+                                      tidyr::extract(
+                                              col = directions,                      # column containing "N (0)"
+                                              into = c("direction", "azimuth"),
+                                              regex = "^\\s*([A-Za-z]+)\\s*\\(([-0-9.]+)\\)\\s*$",
+                                              convert = TRUE
+                                      ) |> 
+                                      filter(!is.na(FBAT_plot_id))
+
+View(crown_cover_datasheets)
+
+# Verify total columns and column names in each data frame
+View(janitor::compare_df_cols(
+                              crown_cover_ipadsPro,
+                              crown_cover_Myipad,
+                              crown_cover_datasheets
+                              )
+      )
+
+
+# Combine all canopy datasets into one
+canopy_cover_combined <- bind_rows(
+                          crown_cover_ipadsPro,
+                          crown_cover_Myipad,
+                          crown_cover_datasheets
+
+# Calculate canopy density for each plot
+source("R\\calculate_crownDensity.r")
+
+canopy_density <- canopy_cover_combined |> 
+                  rename("distance1" = distance_0m,
+                         "distance2" = distance_7_7m,
+                         "distance3" = distance_15_24m) |> 
+                         mutate(
+                                across(
+                                  c(distance1, distance2, distance3),
+                                  ~ as.numeric(replace(.x, .x == "Invalid Number", "0"))
+                                ),
+                                row_density = rowMeans(across(c(distance1, distance2, distance3)), na.rm = TRUE)
+                              ) %>%
+                              group_by(FBAT_plot_id) %>%
+                              summarise(
+                                crown_density = round(mean(row_density, na.rm = TRUE), 2),
+                                .groups = "drop"
+                              )
+
+View(canopy_density)
+
+# Categorize canopy density into low, medium, high
+canopy_density <- canopy_density |> 
+                    mutate(
+                      canopy_class = case_when(
+                        crown_density < 15 ~ "Low",
+                        crown_density >= 15 & crown_density < 50 ~ "Medium",
+                        crown_density >= 50 ~ "High",
+                        TRUE ~ NA_character_
+                      )
+                    )
+                
+                
+# Plot this number of FBAT plots vs Canopy class
+
+canopy_class_counts <- canopy_density |>
+  filter(!is.na(canopy_class)) |>
+  mutate(canopy_class = factor(canopy_class, levels = c("Low", "Medium", "High"))) |>
+  count(canopy_class, name = "n_fbat_plots")
+
+ggplot(canopy_class_counts, aes(x = canopy_class, y = n_fbat_plots, fill = canopy_class)) +
+  geom_col() +
+  geom_text(aes(label = n_fbat_plots), vjust = -0.3, size = 5) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.08))) +
+   theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text.x = element_text(size = 14),
+    axis.text.y = element_text(size = 14)
+  ) +
+  labs(title = "Number of FBAT Plots by Canopy Class",
+       x = "Canopy Class",
+       y = "Number of FBAT Plots",
+       fill = "Canopy Class")
+
+
+ggsave("fbat_plots_by_canopy_class.png", width = 12, height = 7, dpi = 300)
+
+
+
+# Randomly select 10 plots from each canopy class for further analysis
+set.seed(123)  # For reproducibility
+selected_plots <- canopy_density |> 
+  filter(!is.na(canopy_class), !is.na(FBAT_plot_id)) |>
+  group_by(canopy_class) |> 
+  slice_sample(prop = 1) |>
+  slice_head(n = 10) |>
+  ungroup()
+
+View(selected_plots)
+# Export selected plots for further analysis
+writexl::write_xlsx(selected_plots, 
+                     file.path(base_dir, "data", "analyzed_data", "selected_fbat_plots_GEOG372.xlsx"))
+
+# Create a table with canopy class, number of selected plots, and selected FBAT IDs
+canopy_class_table <- selected_plots |> 
+  group_by(canopy_class) |> 
+  summarise(
+    n_fbat_plots = n(),
+    selected_fbat_ids = paste(FBAT_plot_id, collapse = ", "),
+    .groups = "drop"
+  )
+
+View(canopy_class_table)
+
+# Export canopy class table for reporting
+writexl::write_xlsx(canopy_class_table,
+                      file.path(base_dir, "data", "analyzed_data", "canopy_class_summary_GEOG372.xlsx"))  
+```
+
+
+
 # Locate the tree and calculate coordinate of trees based on plot GPS coordinates, tree azimuth and distance from plot center
 ```{r}
 tree_coordinate <- locate_tree(
@@ -571,12 +740,6 @@ View(tree_measurement_combined)
 ```
 
 
-# Preparing crown cover data for analysis
-```{r}
-# Crown cover data from iPads Pro
-crown_cover_ipadsPro <- read.csv(here::here("Rfbat/data/iPad Pro data/crown_cover_pro.csv")) |> 
-                        select(FBAT_plot_id, crown_cover_est
-```
 
 # Standardize species names in the combined dataset
 ```{r}
