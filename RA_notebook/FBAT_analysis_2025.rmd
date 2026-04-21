@@ -401,7 +401,7 @@ View(fbat_plots_2025)
 # Preparing Regeneration data for analysis
 ```{r}
 # Vegetation data from iPads Pro
-regeneration_ipadsPro <- read.csv(here::here("Rfbat/data/iPad Pro data/vegetation_pro.csv")) |> 
+regeneration_ipadsPro <- read.csv(file.path(base_dir, "data/iPad Pro data/vegetation_pro.csv")) |> 
                         select(
                         FBAT_plot_id, transect, transect_slope, transect_azimuth, 
                         herb_pcnt_alive_est,	herbs_avg_hgt_est,	herbs_pcnt_cover_est,	
@@ -423,7 +423,7 @@ regeneration_ipadsPro <- read.csv(here::here("Rfbat/data/iPad Pro data/vegetatio
 View(regeneration_ipadsPro)
 
 # Vegetation data from Sushil's iPad
-regeneration_Myipad <- read.csv(here::here("Rfbat/data/Sushil's iPad/vegetation_sp.csv")) |> 
+regeneration_Myipad <- read.csv(file.path(base_dir, "data/Sushil's iPad/vegetation_sp.csv")) |> 
                         select(
                         FBAT_plot_id, transect, transect_slope, transect_azimuth,
                         herb_pcnt_alive_est,	herbs_avg_hgt_est,	herbs_pcnt_cover_est,	
@@ -446,7 +446,7 @@ View(regeneration_Myipad)
 
 # Vegetation data from scanned datasheets
 regeneration_datasheet <- read_excel(
-                                  (here::here("Rfbat/data/FBAT_plot_data_2025.xlsx")),
+                                  file.path(base_dir, "data/FBAT_plot_data_2025.xlsx"),
                                   sheet = "vegetation_regeneration"
                                   ) |> 
                                   select(
@@ -703,6 +703,11 @@ View(canopy_class_table)
 # Export canopy class table for reporting
 writexl::write_xlsx(canopy_class_table,
                       file.path(base_dir, "data", "analyzed_data", "canopy_class_summary_GEOG372.xlsx"))  
+
+
+
+
+
 ```
 
 

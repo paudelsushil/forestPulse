@@ -96,3 +96,12 @@ terra::writeRaster(plt24_EXGR_class,
                    overwrite = TRUE)
 plot(plt24_EXGR_class)
 ```
+
+# CHM
+
+```{r}
+plt_33_DEM <- terra::rast(file.path(drone_orthomosaic, "plt_33_mission1-DEM.tif"))
+
+Plt 103 CHM <- terra::rast(file.path(drone_orthomosaic, "plt_103_mission1-CHM.tif"))
+
+```
