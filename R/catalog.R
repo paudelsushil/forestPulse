@@ -50,13 +50,13 @@
   list(
     filepath     = normalizePath(path, mustWork = FALSE),
     filename     = basename(path),
-    n_bands      = terra::nlyr(r),
-    n_rows       = terra::nrow(r),
-    n_cols       = terra::ncol(r),
+    n_bands      = as.integer(terra::nlyr(r)),
+    n_rows       = as.integer(terra::nrow(r)),
+    n_cols       = as.integer(terra::ncol(r)),
     res_x        = terra::res(r)[1],
     res_y        = terra::res(r)[2],
     crs_wkt      = crs_raw,
-    crs_epsg     = epsg,
+    crs_epsg     = if (is.null(epsg)) NA_character_ else as.character(epsg),
     xmin         = ext$xmin,
     xmax         = ext$xmax,
     ymin         = ext$ymin,
@@ -66,7 +66,6 @@
     file_size_mb = round(file.info(path)$size / 1048576, 3)
   )
 }
-
 
 #' Convert Bounding Box to sf Polygon
 #'
