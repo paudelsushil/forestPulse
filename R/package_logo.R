@@ -2,7 +2,7 @@
 generate_package_logo <- function(
   output_png = "man/figures/logo.png",
   output_pdf = "man/figures/logo_print.pdf",
-  register_logo = FALSE
+  register_logo = TRUE
 ) {
   required_pkgs <- c("hexSticker", "ggplot2", "showtext", "sysfonts")
   missing_pkgs <- required_pkgs[!vapply(required_pkgs, requireNamespace, logical(1), quietly = TRUE)]
@@ -21,15 +21,21 @@ generate_package_logo <- function(
 
   col_bg_dark <- "#1B4332"
   col_bg_mid <- "#2D6A4F"
-  col_pulse <- "#D8F3DC"
+  col_pulse <- "#da1305"
   col_text_main <- "#F1FAEE"
   col_text_sub <- "#B7E4C7"
   col_tree_back <- "#1B4332"
   col_tree_front <- "#081C17"
 
   pulse_df <- data.frame(
-    x = c(0.10, 0.38, 0.43, 0.46, 0.49, 0.52, 0.55, 0.58, 0.61, 0.90),
-    y = c(0.50, 0.50, 0.60, 0.38, 0.72, 0.33, 0.70, 0.45, 0.50, 0.50)
+    x = c(
+      0.10, 0.30, 0.35, 0.38, 0.41, 0.44, 0.47, 0.50, 0.53,
+      0.57, 0.62, 0.65, 0.68, 0.71, 0.74, 0.77, 0.80, 0.90
+    ),
+    y = c(
+      0.50, 0.50, 0.60, 0.38, 0.72, 0.33, 0.70, 0.45, 0.50,
+      0.50, 0.60, 0.38, 0.72, 0.33, 0.70, 0.45, 0.50, 0.50
+    )
   )
 
   trees_back <- data.frame(
@@ -96,6 +102,13 @@ generate_package_logo <- function(
       panel.background = ggplot2::element_rect(fill = "transparent", colour = NA)
     )
 
+  if (!dir.exists(dirname(output_png))) {
+    dir.create(dirname(output_png), recursive = TRUE, showWarnings = FALSE)
+  }
+  if (!dir.exists(dirname(output_pdf))) {
+    dir.create(dirname(output_pdf), recursive = TRUE, showWarnings = FALSE)
+  }
+
   hexSticker::sticker(
     subplot = logo_plot,
     package = "forestPulse",
@@ -140,9 +153,23 @@ generate_package_logo <- function(
     dpi = 1200
   )
 
-  if (isTRUE(register_logo) && requireNamespace("usethis", quietly = TRUE)) {
-    usethis::use_logo(output_png)
+  if (isTRUE(register_logo)) {
+    if (requireNamespace("usethis", quietly = TRUE)) {
+      usethis::use_logo(output_png)
+      message("Logo registered with usethis::use_logo().")
+    } else {
+      message("Package 'usethis' is not installed; skipping logo registration.")
+    }
   }
 
-  invisible(list(png = output_png, pdf = output_pdf))
+  png_path <- normalizePath(output_png, winslash = "/", mustWork = FALSE)
+  pdf_path <- normalizePath(output_pdf, winslash = "/", mustWork = FALSE)
+
+  message(
+    "Logo files generated:\n",
+    "- ", png_path, "\n",
+    "- ", pdf_path
+  )
+
+  invisible(list(png = png_path, pdf = pdf_path))
 }
