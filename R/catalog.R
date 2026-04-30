@@ -35,17 +35,48 @@
 
   r   <- terra::rast(path)
   ext <- terra::ext(r)
-  crs_raw <- terra::crs(r)
 
-  epsg <- tryCatch(
-    terra::crs(r, describe = TRUE)$code,
+  # --- CRS: extract everything the raster carries --------------------------
+  crs_wkt   <- terra::crs(r)                          # full WKT string
+  crs_proj4 <- tryCatch(
+    terra::crs(r, proj = TRUE),                        # proj4 string
     error = function(e) NA_character_
   )
 
+  crs_desc <- tryCatch(
+    terra::crs(r, describe = TRUE),                    # data.frame
+    error = function(e) NULL
+  )
+
+  if (!is.null(crs_desc) && nrow(crs_desc) > 0L) {
+    crs_name   <- as.character(crs_desc$name[1])
+    crs_code   <- as.character(crs_desc$code[1])
+    crs_auth   <- as.character(crs_desc$authority[1])
+    crs_area   <- as.character(crs_desc$area[1])
+  } else {
+    crs_name   <- NA_character_
+    crs_code   <- NA_character_
+    crs_auth   <- NA_character_
+    crs_area   <- NA_character_
+  }
+
+  # handle NULL / empty returns
+  if (is.null(crs_wkt) || nchar(crs_wkt) == 0L) {
+    crs_wkt <- NA_character_
+  }
+  if (is.null(crs_proj4) || nchar(crs_proj4) == 0L) {
+    crs_proj4 <- NA_character_
+  }
+
+  # --- driver ---------------------------------------------------------------
   driver <- tryCatch(
     terra::describe(path, sds = FALSE)[1],
     error = function(e) NA_character_
   )
+
+  # --- datatype (per-band; take first) -------------------------------------
+  dtype <- terra::datatype(r)
+  dtype <- if (length(dtype) > 1L) dtype[1] else dtype
 
   list(
     filepath     = normalizePath(path, mustWork = FALSE),
@@ -55,18 +86,21 @@
     n_cols       = as.integer(terra::ncol(r)),
     res_x        = terra::res(r)[1],
     res_y        = terra::res(r)[2],
-    crs_wkt      = crs_raw,
-    crs_epsg     = if (is.null(epsg)) NA_character_ else as.character(epsg),
+    crs_name     = crs_name,
+    crs_code     = crs_code,
+    crs_auth     = crs_auth,
+    crs_area     = crs_area,
+    crs_proj4    = crs_proj4,
+    crs_wkt      = crs_wkt,
     xmin         = ext$xmin,
     xmax         = ext$xmax,
     ymin         = ext$ymin,
     ymax         = ext$ymax,
     driver       = driver,
-    datatype     = terra::datatype(r),
+    datatype     = dtype,
     file_size_mb = round(file.info(path)$size / 1048576, 3)
   )
 }
-
 #' Convert Bounding Box to sf Polygon
 #'
 #' @param xmin,xmax,ymin,ymax Numeric. Coordinates.
