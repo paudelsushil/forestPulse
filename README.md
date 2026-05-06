@@ -1,5 +1,5 @@
-<p align="center">
-  <img src="man/figures/logo.png" alt="forestPulse logo" width="240" />
+s::<p align="center">
+  <img src="logo.png" alt="forestPulse logo" width="240" />
 </p>
 
 # forestPulse

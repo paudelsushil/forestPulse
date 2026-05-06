@@ -1,39 +1,40 @@
 Package: forestPulse
 Type: Package
 Title: Analyzing Forest Eco-Pulse from Field and Remote Sensing Data in R
-Version: 0.2.2
-Authors@R: person(given = "Sushil", family = "Paudel", role = c("aut", "cre"), email = "clarkesushi@gmail.com")
-Description: A comprehensive toolkit for processing, analyzing and 
-    monitoring ecological changes in forest ecosystems using field 
-    data and remote sensing imagery. Designed to support researchers, ecologists and 
-    forest managers in quantifying disturbance events and tracking 
-    long-term ecosystem dynamics.
+Version: 0.2.3
+Authors@R: person(given = "Sushil", family = "Paudel", role = c("aut", "cre"),
+    email = "clarkesushi@gmail.com")
+Description: A comprehensive toolkit for processing, analyzing, and monitoring
+    ecological changes in forest ecosystems using field data and remote sensing
+    imagery. Designed to support researchers, ecologists, and forest managers
+    in quantifying disturbance events and tracking long-term ecosystem dynamics.
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
-Depends: 
+Depends:
     R (>= 4.1.0)
 Imports:
-    doParallel,
     dplyr,
-    ggplot2,
+    future,
+    future.apply,
+    geosphere,
+    graphics,
     landscapemetrics,
     lubridate,
-    ncdf4,
+    progressr,
     rlang,
     sf,
+    stats,
     stringr,
     terra,
-    tibble,
-    tidyr
+    tools,
+    utils
 Suggests:
     car,
-    progressr,
     corrplot,
     here,
     RColorBrewer,
-    foreach,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
