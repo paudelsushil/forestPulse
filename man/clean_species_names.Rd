@@ -49,8 +49,8 @@ and handles multiple variations of species codes.
 }
 \examples{
 example_df <- data.frame(
-   species = c("CBO", "IC", "UNKNOWN", "J.P", "XCODE"),
-   stringsAsFactors = FALSE
+  species = c("CBO", "IC", "UNKNOWN", "J.P", "XCODE"),
+  stringsAsFactors = FALSE
 )
 
 # Basic usage

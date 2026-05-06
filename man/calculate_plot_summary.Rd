@@ -26,14 +26,14 @@ calculate_plot_summary(
 
 \item{height_col}{Name of tree height column in meters.}
 
-\item{units}{Output basal area units: \code{"cm2"}, \code{"m2"}, or \code{"ha"}.}
+\item{units}{Deprecated. Kept for compatibility.}
 
 \item{plot_area_m2}{Plot area in square meters used for per-hectare scaling.}
 
 \item{include_dead}{If \code{FALSE}, trees with \code{deadAlive == "D"} are removed when present.}
 }
 \value{
-Data frame with plot-level summary statistics.
+Tibble (or data frame fallback) with plot-level summary statistics.
 }
 \description{
 Calculate Plot-Level Summary Statistics

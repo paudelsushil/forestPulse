@@ -21,8 +21,8 @@ new codes that need to be added.
 }
 \examples{
 example_df <- data.frame(
-	species = c("CBO", "IC", "UNKNOWN", "XCODE"),
-	stringsAsFactors = FALSE
+  species = c("CBO", "IC", "UNKNOWN", "XCODE"),
+  stringsAsFactors = FALSE
 )
 
 # Check for unmapped codes before standardizing

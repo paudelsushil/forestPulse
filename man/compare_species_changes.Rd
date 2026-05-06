@@ -22,8 +22,8 @@ during standardization.
 }
 \examples{
 example_df <- data.frame(
-	species = c("CBO", "IC", "J.P", "UNKNOWN"),
-	stringsAsFactors = FALSE
+  species = c("CBO", "IC", "J.P", "UNKNOWN"),
+  stringsAsFactors = FALSE
 )
 
 # First clean with keep_original = TRUE

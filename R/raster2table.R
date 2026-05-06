@@ -21,7 +21,7 @@ raster2table <- function(rasterDir, pattern, variable_name, aoi) {
 
   results <- data.frame()
 
-  for(i in 1:nlyr(r)) {
+  for(i in 1:terra::nlyr(r)) {
     # Extract single layer
     nc <- ncdf4::nc_open(raster_files[i])
     times <- ncdf4::ncvar_get(nc, timeUnit)

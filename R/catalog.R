@@ -349,7 +349,7 @@ read_catalog <- function(path) {
   )
 
   if (!"filepath" %in% names(catalog)) {
-    warning("Missing 'filepath' column — may not be a valid catalog.",
+    warning("Missing 'filepath' column \u2014 may not be a valid catalog.",
             call. = FALSE)
   }
   catalog

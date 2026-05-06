@@ -2,7 +2,7 @@
 % Please edit documentation in R/calculate_basal_area.r
 \name{calculate_species_basal_area}
 \alias{calculate_species_basal_area}
-\title{Calculate Species-Wise Basal Area from FBAT Plot Data}
+\title{Calculate Species-Wise basal Area from FBAT Plot Data}
 \usage{
 calculate_species_basal_area(
   data,
@@ -29,15 +29,16 @@ calculate_species_basal_area(
 
 \item{height_col}{Name of tree height column in meters.}
 
-\item{units}{Output basal area units: \code{"cm2"}, \code{"m2"}, or \code{"ha"}.}
+\item{units}{Deprecated. Kept for compatibility.}
 
 \item{plot_area_m2}{Plot area in square meters used for per-hectare scaling.}
 
 \item{include_dead}{If \code{FALSE}, trees with \code{deadAlive == "D"} are removed when present.}
 }
 \value{
-Data frame with species-level basal area and optional height stats.
+Tibble (or data frame fallback) with species-level basal area and
+optional height stats.
 }
 \description{
-Calculate Species-Wise Basal Area from FBAT Plot Data
+Calculate Species-Wise basal Area from FBAT Plot Data
 }

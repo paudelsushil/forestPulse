@@ -5,7 +5,6 @@
 ^\.github$
 ^\.vscode$
 ^RA_notebook$
-^forestPluse_.*\.tar\.gz$
 ^R/Chi-square test\.R$
 ^R/analyze_vif_models\.R$
 ^R/balance_plot_size\.R$
@@ -63,3 +62,13 @@
 ^R/trying extra\.R$
 ^R/twi\.R$
 ^R/tylorslaw_example\.R$
+^R/calculate_twi\.R$
+^R/daily_to_monthly_pdsi\.R$
+^R/daily2Monthly_pet\.R$
+^R/package_logo\.R$
+^RA_Work$
+^GEOG_project$
+^forestPulse\.Rcheck$
+^forestPulse_.*\.tar\.gz$
+^Rplots\.pdf$
+^.*\.png$
