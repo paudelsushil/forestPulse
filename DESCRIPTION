@@ -1,7 +1,7 @@
 Package: forestPulse
 Type: Package
 Title: Analyzing Forest Eco-Pulse from Field and Remote Sensing Data in R
-Version: 0.2.1
+Version: 0.2.2
 Authors@R: person(given = "Sushil", family = "Paudel", role = c("aut", "cre"), email = "clarkesushi@gmail.com")
 Description: A comprehensive toolkit for processing, analyzing and 
     monitoring ecological changes in forest ecosystems using field 
