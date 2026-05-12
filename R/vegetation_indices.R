@@ -55,25 +55,11 @@
 #' # List all available indices
 #' vegetation_index("list")
 #'
-#' \dontrun{
-#' # Compute ExG from a GeoTIFF (output auto-named alongside input)
-#' result <- vegetation_index("ExG", image_path = "field_rgb.tif")
-#'
-#' # Specify bands by name, custom output path
-#' result <- vegetation_index(
-#'   index_name  = "NGRDI",
-#'   image_path  = "multispectral.tif",
-#'   red_band    = "Red",
-#'   green_band  = "Green",
-#'   blue_band   = "Blue",
-#'   output_path = "output/ngrdi.tif",
-#'   overwrite   = TRUE
-#' )
-#'
-#' # Pass an in-memory SpatRaster
-#' r <- terra::rast(system.file("ex/logo.tif", package = "terra"))
-#' result <- vegetation_index("GLI", image_path = r, output_path = "gli.tif")
-#' }
+#' # Compute an index from terra's bundled 3-band sample raster
+#' r   <- terra::rast(system.file("ex/logo.tif", package = "terra"))
+#' out <- tempfile(fileext = ".tif")
+#' result <- vegetation_index("GLI", image_path = r, output_path = out)
+#' file.remove(out)
 #'
 #' @export
 #' @importFrom stats setNames

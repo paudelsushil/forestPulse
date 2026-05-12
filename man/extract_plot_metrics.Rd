@@ -66,23 +66,25 @@ metrics and field-measured variables (regeneration, fuel loads,
 ground vegetation).
 }
 \examples{
-\dontrun{
-# basic usage
-metrics <- extract_plot_metrics(
-  chm   = "chm.tif",
-  plots = study_plots,
-  radius = 15.24,
-  gap_threshold = 3
+# synthesise a CHM and field plot centres (no CRS for a self-contained
+# example; in practice both inputs should carry a projected CRS in metres)
+set.seed(1)
+chm <- terra::rast(
+  nrows = 60, ncols = 60,
+  xmin = 0, xmax = 60, ymin = 0, ymax = 60,
+  vals = runif(3600, 0, 25)
 )
 
-# sensitivity analysis with multiple radii
+plots <- sf::st_as_sf(
+  data.frame(plot_id = c("P1", "P2"), x = c(20, 40), y = c(30, 30)),
+  coords = c("x", "y")
+)
+
 metrics <- extract_plot_metrics(
-  chm   = "chm.tif",
-  plots = study_plots,
-  radius = 15.24,
-  multi_radius = c(25, 50, 75),
+  chm           = chm,
+  plots         = plots,
+  radius        = 10,
   gap_threshold = 3
 )
-}
 
 }

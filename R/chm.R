@@ -95,18 +95,21 @@
 #'   typically meters).
 #'
 #' @examples
-#' \dontrun{
-#' # from file paths
-#' chm <- compute_chm("dsm.tif", "dtm.tif", output = "chm.tif")
+#' # synthesise a small DSM and DTM
+#' set.seed(1)
+#' dsm <- terra::rast(nrows = 20, ncols = 20, vals = runif(400, 10, 30))
+#' dtm <- terra::rast(nrows = 20, ncols = 20, vals = runif(400,  5, 15))
 #'
-#' # from SpatRaster objects
-#' dsm <- terra::rast("dsm.tif")
-#' dtm <- terra::rast("dtm.tif")
+#' # compute CHM in memory
 #' chm <- compute_chm(dsm, dtm)
 #'
-#' # keep negatives (e.g. for QA inspection)
+#' # keep negatives (for QA inspection)
 #' chm_raw <- compute_chm(dsm, dtm, clamp = FALSE)
-#' }
+#'
+#' # write CHM to a temporary file
+#' out <- tempfile(fileext = ".tif")
+#' chm_file <- compute_chm(dsm, dtm, output = out, overwrite = TRUE)
+#' file.remove(out)
 #'
 #' @export
 compute_chm <- function(dsm,

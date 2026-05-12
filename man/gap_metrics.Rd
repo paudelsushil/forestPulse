@@ -33,13 +33,15 @@ Calculates gap area, shape index, edge density, and fractal dimension
 \code{landscapemetrics}.
 }
 \examples{
-\dontrun{
+# synthesise a small CHM and classify gaps
+set.seed(1)
+chm  <- terra::rast(nrows = 30, ncols = 30, vals = runif(900, 0, 25))
+gaps <- classify_gaps(chm, threshold = 3)
+
 # per-gap metrics
-gap_raster <- classify_gaps("chm.tif", threshold = 3)
-metrics <- gap_metrics(gap_raster)
+metrics <- gap_metrics(gaps)
 
 # class-level summary
-summary <- gap_metrics(gap_raster, level = "class")
-}
+summary <- gap_metrics(gaps, level = "class")
 
 }

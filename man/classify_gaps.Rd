@@ -38,15 +38,14 @@ Creates a binary raster where gap = 1 and canopy = 0 using a height
 or brightness threshold.
 }
 \examples{
-\dontrun{
-# from CHM with fixed threshold
-gap_raster <- classify_gaps("chm.tif", threshold = 3)
+# synthesise a small CHM
+set.seed(1)
+chm <- terra::rast(nrows = 30, ncols = 30, vals = runif(900, 0, 25))
 
-# automatic threshold
-gap_raster <- classify_gaps("chm.tif", method = "otsu")
+# fixed threshold
+gaps <- classify_gaps(chm, threshold = 3)
 
-# remove tiny gaps
-gap_raster <- classify_gaps("chm.tif", threshold = 3, min_area = 10)
-}
+# automatic Otsu threshold
+gaps_otsu <- classify_gaps(chm, method = "otsu")
 
 }
