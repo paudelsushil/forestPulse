@@ -4,6 +4,7 @@
 ^\.git$
 ^\.github$
 ^\.vscode$
+^\.claude$
 ^RA_notebook$
 ^R/Chi-square test\.R$
 ^R/analyze_vif_models\.R$
@@ -66,6 +67,10 @@
 ^R/daily_to_monthly_pdsi\.R$
 ^R/daily2Monthly_pet\.R$
 ^R/package_logo\.R$
+^R/zzz\.R$
+^R/extract_files\.r$
+^package_logo\.R$
+^chm_catalog\.geojson$
 ^RA_Work$
 ^GEOG_project$
 ^forestPulse\.Rcheck$

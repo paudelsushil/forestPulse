@@ -422,6 +422,9 @@ query_catalog <- function(catalog,
 #' @param plot_crs CRS for data.frame coordinates.
 #' @param buffer Buffer distance in catalog CRS units.
 #' @param col_name Name for the new column. Default \code{"matched_imagery"}.
+#' @param match_value Which catalog value to attach for matches.
+#'   Use \code{"filepath"} (default), \code{"filename"},
+#'   or \code{"filename_no_ext"}.
 #' @return Input plots as \code{sf} with matched file paths attached.
 #' @export
 match_imagery <- function(catalog,
@@ -430,7 +433,8 @@ match_imagery <- function(catalog,
                           y_col    = "y",
                           plot_crs = "EPSG:4326",
                           buffer   = 0,
-                          col_name = "matched_imagery") {
+                          col_name = "matched_imagery",
+                          match_value = "filepath") {
 
   catalog  <- .to_sf(catalog, label = "catalog")
   plots_sf <- .to_sf(plots, x_col = x_col, y_col = y_col,
@@ -448,6 +452,46 @@ match_imagery <- function(catalog,
     query_geom <- plots_sf
   }
 
+  stopifnot(
+    "'match_value' must be a single character string." =
+      is.character(match_value) && length(match_value) == 1L
+  )
+
+  value_vec <- switch(
+    match_value,
+    filepath = {
+      if (!"filepath" %in% names(catalog)) {
+        stop("Catalog does not contain a 'filepath' column.", call. = FALSE)
+      }
+      as.character(catalog$filepath)
+    },
+    filename = {
+      if ("filename" %in% names(catalog)) {
+        as.character(catalog$filename)
+      } else if ("filepath" %in% names(catalog)) {
+        basename(as.character(catalog$filepath))
+      } else {
+        stop("Catalog does not contain 'filename' or 'filepath' columns.",
+             call. = FALSE)
+      }
+    },
+    filename_no_ext = {
+      if ("filename" %in% names(catalog)) {
+        tools::file_path_sans_ext(as.character(catalog$filename))
+      } else if ("filepath" %in% names(catalog)) {
+        tools::file_path_sans_ext(basename(as.character(catalog$filepath)))
+      } else {
+        stop("Catalog does not contain 'filename' or 'filepath' columns.",
+             call. = FALSE)
+      }
+    },
+    stop(
+      "Invalid 'match_value': ", match_value,
+      ". Use one of: 'filepath', 'filename', 'filename_no_ext'.",
+      call. = FALSE
+    )
+  )
+
   hits <- tryCatch(
     suppressMessages(sf::st_intersects(query_geom, catalog)),
     error = function(e) {
@@ -457,7 +501,7 @@ match_imagery <- function(catalog,
 
   paths <- vapply(hits, function(idx) {
     if (length(idx) == 0L) return(NA_character_)
-    paste(catalog$filepath[idx], collapse = " | ")
+    paste(value_vec[idx], collapse = " | ")
   }, character(1))
 
   plots_sf[[col_name]] <- paths

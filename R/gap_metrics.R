@@ -161,7 +161,7 @@ classify_gaps <- function(r,
 #' @noRd
 .otsu_threshold <- function(vals) {
 
-  h <- hist(vals, breaks = 256, plot = FALSE)
+  h <- graphics::hist(vals, breaks = 256, plot = FALSE)
   counts <- h$counts
   mids   <- h$mids
   total  <- sum(counts)

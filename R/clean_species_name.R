@@ -17,24 +17,25 @@
 #' and Burn Area Treatment) plot data. It performs case-insensitive matching
 #' and handles multiple variations of species codes.
 #'
-#' **Species Standardization Table:**
-#' 
-#' | Standard Name         | Accepted Codes                                |
-#' |-----------------------|-----------------------------------------------|
-#' | California Black Oak  | CBO, Cal BO, Cal. B.O., C.b.o, QC, Quercus   |
-#' | Incense Cedar         | IC, I.c, CAL IC, ICc                          |
-#' | Jeffrey Pine          | JP, J.p, JFP, Jfp                             |
-#' | Sugar Pine            | Sugar Pine, S.p                               |
-#' | White Fir             | SWF, WFIR, Wfir, S.w.f, W                     |
-#' | Douglas-fir           | DF, Dfir                                      |
-#' | Ponderosa Pine        | PP, Pp, P.p                                   |
-#' | Lodgepole Pine        | LPP, L.p.p, Lp, LGP                           |
-#' | Red Fir               | RF, Rfir, Rfir                                      |
-#' | Gray Pine             | GP                                            |
-#' | Giant Sequoia         | GS                                            |
-#' | Juniper               | Juniper                                       |
-#' | Cedar                 | Cedar                                         |
-#' | Unknown               | UNKNOWN, NA, Undo, TBD, DW                    |
+#' Species Standardization Table:
+#'
+#' \tabular{ll}{
+#'   \strong{Standard Name}  \tab \strong{Accepted Codes} \cr
+#'   California Black Oak    \tab CBO, Cal BO, Cal. B.O., C.b.o, QC, Quercus \cr
+#'   Incense Cedar           \tab IC, I.c, CAL IC, ICc \cr
+#'   Jeffrey Pine            \tab JP, J.p, JFP, Jfp \cr
+#'   Sugar Pine              \tab Sugar Pine, S.p \cr
+#'   White Fir               \tab SWF, WFIR, Wfir, S.w.f, W \cr
+#'   Douglas-fir             \tab DF, Dfir \cr
+#'   Ponderosa Pine          \tab PP, Pp, P.p \cr
+#'   Lodgepole Pine          \tab LPP, L.p.p, Lp, LGP \cr
+#'   Red Fir                 \tab RF, Rfir \cr
+#'   Gray Pine               \tab GP \cr
+#'   Giant Sequoia           \tab GS \cr
+#'   Juniper                 \tab Juniper \cr
+#'   Cedar                   \tab Cedar \cr
+#'   Unknown                 \tab UNKNOWN, NA, Undo, TBD, DW \cr
+#' }
 #'
 #' @examples
 #' example_df <- data.frame(
@@ -217,21 +218,7 @@ clean_species_names <- function(df,
     n_unknown <- sum(df[[species_col_name]] == "Unknown", na.rm = TRUE)
     pct_unknown <- round(n_unknown / nrow(df) * 100, 2)
     
-    # Print summary
-    cat("\n")
-    cat("=======================================================\n")
-    cat("          SPECIES STANDARDIZATION SUMMARY\n")
-    cat("=======================================================\n\n")
-    cat(sprintf("Total records:              %d\n", nrow(df)))
-    cat(sprintf("Records changed:            %d (%.2f%%)\n", n_changed, pct_changed))
-    cat(sprintf("Original unique species:    %d\n", original_unique))
-    cat(sprintf("Standardized species:       %d\n", standardized_unique))
-    cat(sprintf("Unknown/Missing:            %d (%.2f%%)\n", n_unknown, pct_unknown))
-    cat("\n")
-    
     # Show top species
-    cat("Top 10 Species (after standardization):\n")
-    cat("-------------------------------------------------------\n")
     species_vals <- df[[species_col_name]]
     species_vals <- species_vals[!is.na(species_vals)]
     top_tab <- sort(table(species_vals), decreasing = TRUE)
@@ -242,14 +229,31 @@ clean_species_names <- function(df,
       stringsAsFactors = FALSE
     )
 
-    for (i in seq_len(nrow(top_species))) {
-      cat(sprintf("  %d. %-25s %d\n", 
-                  i, 
-                  top_species$species[i], 
-                  top_species$count[i]))
-    }
-    
-    cat("\n=======================================================\n\n")
+    top_lines <- vapply(
+      seq_len(nrow(top_species)),
+      function(i) sprintf("  %d. %-25s %d",
+                          i, top_species$species[i], top_species$count[i]),
+      character(1)
+    )
+
+    message(paste(
+      "",
+      "=======================================================",
+      "          SPECIES STANDARDIZATION SUMMARY",
+      "=======================================================",
+      "",
+      sprintf("Total records:              %d", nrow(df)),
+      sprintf("Records changed:            %d (%.2f%%)", n_changed, pct_changed),
+      sprintf("Original unique species:    %d", original_unique),
+      sprintf("Standardized species:       %d", standardized_unique),
+      sprintf("Unknown/Missing:            %d (%.2f%%)", n_unknown, pct_unknown),
+      "",
+      "Top 10 Species (after standardization):",
+      "-------------------------------------------------------",
+      paste(top_lines, collapse = "\n"),
+      "=======================================================",
+      sep = "\n"
+    ))
   }
   
   # ============================================================================
@@ -414,15 +418,16 @@ check_unmapped_species <- function(df, species_col) {
   
   # Print results
   if (nrow(unmapped) > 0) {
-    cat("\nWARNING: Found unmapped species codes\n")
-    cat("=======================================\n\n")
-    print(unmapped)
-    cat("\n")
-    cat("Consider adding these codes to clean_species_names() function.\n\n")
+    message(
+      "\nWARNING: Found unmapped species codes\n",
+      "=======================================\n\n",
+      paste(utils::capture.output(print(unmapped)), collapse = "\n"),
+      "\n\nConsider adding these codes to clean_species_names() function."
+    )
   } else {
-    cat("\nAll species codes are recognized\n\n")
+    message("All species codes are recognized")
   }
-  
+
   invisible(unmapped)
 }
 
@@ -462,16 +467,16 @@ compare_species_changes <- function(df, original_col, standardized_col) {
   comparison <- comparison[order(comparison[[standardized_name]], comparison[[original_name]]), , drop = FALSE]
   
   if (nrow(comparison) > 0) {
-    cat("\n")
-    cat("=======================================================\n")
-    cat("          SPECIES NAME CHANGES\n")
-    cat("=======================================================\n\n")
-    print(comparison)
-    cat("\n")
+    message(
+      "\n=======================================================\n",
+      "          SPECIES NAME CHANGES\n",
+      "=======================================================\n\n",
+      paste(utils::capture.output(print(comparison)), collapse = "\n")
+    )
   } else {
-    cat("\nNo species names were changed\n\n")
+    message("No species names were changed")
   }
-  
+
   invisible(comparison)
 }
 

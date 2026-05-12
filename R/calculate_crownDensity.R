@@ -119,11 +119,13 @@ show_calculation_details <- function(df, plot_id) {
   crown_density <- mean(all_readings, na.rm = TRUE)
   sd_value <- stats::sd(all_readings, na.rm = TRUE)
 
-  cat(sprintf("Plot: %s\n", plot_id))
-  cat(sprintf("Valid readings (n): %d\n", n_valid))
-  cat(sprintf("Sum of valid readings: %.2f\n", sum_readings))
-  cat(sprintf("Crown density: %.2f%%\n", crown_density))
-  cat(sprintf("SD: %.2f\n", sd_value))
+  message(
+    sprintf("Plot: %s", plot_id), "\n",
+    sprintf("Valid readings (n): %d", n_valid), "\n",
+    sprintf("Sum of valid readings: %.2f", sum_readings), "\n",
+    sprintf("Crown density: %.2f%%", crown_density), "\n",
+    sprintf("SD: %.2f", sd_value)
+  )
 
   invisible(list(
     crown_density = crown_density,

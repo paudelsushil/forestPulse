@@ -29,22 +29,24 @@ This function standardizes tree species names commonly found in FBAT (Fire
 and Burn Area Treatment) plot data. It performs case-insensitive matching
 and handles multiple variations of species codes.
 
-\strong{Species Standardization Table:}\tabular{ll}{
-   Standard Name \tab Accepted Codes \cr
-   California Black Oak \tab CBO, Cal BO, Cal. B.O., C.b.o, QC, Quercus \cr
-   Incense Cedar \tab IC, I.c, CAL IC, ICc \cr
-   Jeffrey Pine \tab JP, J.p, JFP, Jfp \cr
-   Sugar Pine \tab Sugar Pine, S.p \cr
-   White Fir \tab SWF, WFIR, Wfir, S.w.f, W \cr
-   Douglas-fir \tab DF, Dfir \cr
-   Ponderosa Pine \tab PP, Pp, P.p \cr
-   Lodgepole Pine \tab LPP, L.p.p, Lp, LGP \cr
-   Red Fir \tab RF, Rfir, Rfir \cr
-   Gray Pine \tab GP \cr
-   Giant Sequoia \tab GS \cr
-   Juniper \tab Juniper \cr
-   Cedar \tab Cedar \cr
-   Unknown \tab UNKNOWN, NA, Undo, TBD, DW \cr
+Species Standardization Table:
+
+\tabular{ll}{
+\strong{Standard Name}  \tab \strong{Accepted Codes} \cr
+California Black Oak    \tab CBO, Cal BO, Cal. B.O., C.b.o, QC, Quercus \cr
+Incense Cedar           \tab IC, I.c, CAL IC, ICc \cr
+Jeffrey Pine            \tab JP, J.p, JFP, Jfp \cr
+Sugar Pine              \tab Sugar Pine, S.p \cr
+White Fir               \tab SWF, WFIR, Wfir, S.w.f, W \cr
+Douglas-fir             \tab DF, Dfir \cr
+Ponderosa Pine          \tab PP, Pp, P.p \cr
+Lodgepole Pine          \tab LPP, L.p.p, Lp, LGP \cr
+Red Fir                 \tab RF, Rfir \cr
+Gray Pine               \tab GP \cr
+Giant Sequoia           \tab GS \cr
+Juniper                 \tab Juniper \cr
+Cedar                   \tab Cedar \cr
+Unknown                 \tab UNKNOWN, NA, Undo, TBD, DW \cr
 }
 }
 \examples{

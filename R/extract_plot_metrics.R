@@ -342,20 +342,3 @@ extract_plot_metrics <- function(chm,
   output
 }
 
-# Internal helper: Otsu's thresholding on a numeric vector
-# Returns threshold value that maximises between-class variance.
-.otsu_threshold <- function(x) {
-  h     <- hist(x, breaks = 256L, plot = FALSE)
-  probs <- h$counts / sum(h$counts)
-  mids  <- h$mids
-  cp    <- cumsum(probs)
-  cm    <- cumsum(probs * mids)
-  gm    <- sum(probs * mids)
-  w0    <- cp
-  w1    <- 1 - cp
-  valid <- w0 > 0 & w1 > 0
-  bv    <- numeric(length(mids))
-  bv[valid] <- (w0[valid] * w1[valid]) *
-    ((cm[valid] / w0[valid]) - ((gm - cm[valid]) / w1[valid]))^2
-  mids[which.max(bv)]
-}
