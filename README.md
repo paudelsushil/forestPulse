@@ -2,13 +2,10 @@
 
 <!-- badges: start -->
 [![CRAN status](https://www.r-pkg.org/badges/version/forestPulse)](https://CRAN.R-project.org/package=forestPulse)
-[![CRAN checks](https://badges.cranchecks.info/worst/forestPulse.svg)](https://cran.r-project.org/web/checks/check_results_forestPulse.html)
 [![CRAN downloads (monthly)](https://cranlogs.r-pkg.org/badges/forestPulse)](https://cran.r-project.org/package=forestPulse)
 [![CRAN downloads (total)](https://cranlogs.r-pkg.org/badges/grand-total/forestPulse)](https://cran.r-project.org/package=forestPulse)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![R-CMD-check](https://github.com/paudelsushil/forestPulse/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/paudelsushil/forestPulse/actions/workflows/R-CMD-check.yaml)
-[![GitHub release](https://img.shields.io/github/v/release/paudelsushil/forestPulse?include_prereleases&sort=semver)](https://github.com/paudelsushil/forestPulse/releases)
 <!-- badges: end -->
 
 ## Overview
@@ -106,8 +103,7 @@ citation("forestPulse")
 
 ## Getting help
 
-- Report bugs or request features in the
-  [issue tracker](https://github.com/paudelsushil/forestPulse/issues).
+- Report bugs or request features through the project's GitHub repository.
 - For questions about usage, please include a minimal reproducible example.
 
 ## Contributing

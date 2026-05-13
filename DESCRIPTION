@@ -1,7 +1,7 @@
 Package: forestPulse
 Type: Package
 Title: Analyse Forest Structure and Disturbance from Field and Remote Sensing Data
-Version: 0.2.4
+Version: 0.2.5
 Authors@R: person(given = "Sushil", family = "Paudel", role = c("aut", "cre"),
     email = "clarkesushi@gmail.com")
 Description: Analyse forest structure and disturbance dynamics from field
