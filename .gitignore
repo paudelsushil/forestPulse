@@ -1,0 +1,20 @@
+# R session / build artifacts
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rcheck/
+*.tar.gz
+Rplots.pdf
+
+# Local developer tooling (not part of the package)
+dev.ps1
+dev.cmd
+git_protocol.ps1
+
+# Local analysis scripts and working data (not part of the package)
+data-raw/
+GEOG_project/
+RA_Work/
+chm_catalog.geojson
+package_logo.R
