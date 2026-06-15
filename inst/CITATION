@@ -1,0 +1,10 @@
+citHeader("To cite forestPulse in publications, please use:")
+
+bibentry(
+  bibtype  = "Manual",
+  title    = paste0("{forestPulse}: ", meta$Title),
+  author   = person(given = "Sushil", family = "Paudel"),
+  year     = "2026",
+  note     = paste("R package version", meta$Version),
+  doi      = "10.5281/zenodo.17887640"
+)
