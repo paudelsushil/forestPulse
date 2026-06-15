@@ -17,6 +17,7 @@ Description: Analyse forest structure and disturbance dynamics from field
     'SQLite' climate databases for the 'iLand' forest landscape model.
 License: MIT + file LICENSE
 Encoding: UTF-8
+Language: en-GB
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3

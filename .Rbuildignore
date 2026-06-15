@@ -19,7 +19,6 @@
 ^R/combine_model_metrics\.R$
 ^R/connectOndrive\.R$
 ^R/create\.balanced\.strata\.R$
-^R/create\.samples\.R$
 ^R/create_disturbance_features\.R$
 ^R/create_vip_plots\.R$
 ^R/create_vip_table\.R$
@@ -29,7 +28,6 @@
 ^R/daily_to_monthly_precpt\.R$
 ^R/evaluate_ranger_model\.R$
 ^R/extract\.valueByTime_chunked\.R$
-^R/extractValue2Points\.R$
 ^R/fireNonFire_GAM\.R$
 ^R/fireNonFire_XGBoost\.R$
 ^R/fireplots Stratification\.R$
@@ -67,12 +65,14 @@
 ^R/daily_to_monthly_pdsi\.R$
 ^R/daily2Monthly_pet\.R$
 ^R/package_logo\.R$
-^R/zzz\.R$
-^R/extract_files\.r$
 ^package_logo\.R$
+^git_protocol\.ps1$
+^dev\.ps1$
+^dev\.cmd$
 ^chm_catalog\.geojson$
 ^RA_Work$
 ^GEOG_project$
+^data-raw$
 ^forestPulse\.Rcheck$
 ^forestPulse_.*\.tar\.gz$
 ^Rplots\.pdf$
