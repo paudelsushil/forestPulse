@@ -198,15 +198,18 @@ footprint <- function(path, target_crs = NULL) {
 
 #' @title Build a Spatial Catalog from Geotagged Rasters
 #' @param input Directory path or vector of file paths.
-#' @param output Output GeoJSON path. Defaults to \code{"catalog.geojson"}.
+#' @param output Output GeoJSON path, or \code{NULL} (default) to return the
+#'   catalog without writing any file. To save the catalog, supply a path
+#'   (e.g. \code{file.path(tempdir(), "catalog.geojson")}).
 #' @param target_crs Catalog CRS. Defaults to \code{"EPSG:4326"}.
 #' @param recursive Recurse into subdirectories? Default \code{TRUE}.
 #' @param overwrite Overwrite existing output? Default \code{FALSE}.
 #' @param quiet Suppress messages? Default \code{FALSE}.
-#' @return An \code{sf} object (invisibly). GeoJSON written as side effect.
+#' @return An \code{sf} object (invisibly). When \code{output} is non-\code{NULL},
+#'   a GeoJSON file is written as a side effect.
 #' @export
 build_catalog <- function(input,
-                          output     = "catalog.geojson",
+                          output     = NULL,
                           target_crs = "EPSG:4326",
                           recursive  = TRUE,
                           overwrite  = FALSE,
@@ -214,21 +217,24 @@ build_catalog <- function(input,
 
   stopifnot(
     "'input' must be character."   = is.character(input) && length(input) >= 1L,
-    "'output' must be character."  = is.character(output) && length(output) == 1L,
+    "'output' must be NULL or a single character string." =
+      is.null(output) || (is.character(output) && length(output) == 1L),
     "'recursive' must be logical." = is.logical(recursive),
     "'overwrite' must be logical." = is.logical(overwrite),
     "'quiet' must be logical."     = is.logical(quiet)
   )
 
-  # force .geojson extension
-  if (!grepl("\\.geojson$", output, ignore.case = TRUE)) {
-    output <- sub("\\.[^.]*$", ".geojson", output)
-    if (!grepl("\\.geojson$", output)) output <- paste0(output, ".geojson")
-    if (!quiet) message("Output set to '", output, "'.")
-  }
+  if (!is.null(output)) {
+    # force .geojson extension
+    if (!grepl("\\.geojson$", output, ignore.case = TRUE)) {
+      output <- sub("\\.[^.]*$", ".geojson", output)
+      if (!grepl("\\.geojson$", output)) output <- paste0(output, ".geojson")
+      if (!quiet) message("Output set to '", output, "'.")
+    }
 
-  if (file.exists(output) && !overwrite) {
-    stop("'", output, "' exists. Set overwrite = TRUE.", call. = FALSE)
+    if (file.exists(output) && !overwrite) {
+      stop("'", output, "' exists. Set overwrite = TRUE.", call. = FALSE)
+    }
   }
 
   # discover files
@@ -305,22 +311,24 @@ build_catalog <- function(input,
   geom_out <- lapply(geom_list, .safe_transform, to = target_crs)
   catalog  <- sf::st_sf(attrs, geometry = do.call(c, geom_out))
 
-  # write geojson
-  out_dir <- dirname(output)
-  if (nchar(out_dir) > 0L && !dir.exists(out_dir)) {
-    dir.create(out_dir, recursive = TRUE)
-  }
+  # write geojson only when an output path was supplied
+  if (!is.null(output)) {
+    out_dir <- dirname(output)
+    if (nchar(out_dir) > 0L && !dir.exists(out_dir)) {
+      dir.create(out_dir, recursive = TRUE)
+    }
 
-  sf::st_write(
-    catalog, output,
-    driver        = "GeoJSON",
-    delete_dsn    = overwrite,
-    quiet         = quiet,
-    layer_options = "RFC7946=YES"
-  )
+    sf::st_write(
+      catalog, output,
+      driver        = "GeoJSON",
+      delete_dsn    = overwrite,
+      quiet         = quiet,
+      layer_options = "RFC7946=YES"
+    )
 
-  if (!quiet) {
-    message("Catalog written to '", output, "' (", nrow(catalog), " features).")
+    if (!quiet) {
+      message("Catalog written to '", output, "' (", nrow(catalog), " features).")
+    }
   }
 
   invisible(catalog)

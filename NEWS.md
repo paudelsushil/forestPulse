@@ -1,3 +1,18 @@
+# forestPulse 0.3.1
+
+CRAN resubmission: addresses feedback from the initial submission.
+
+* Added method references with DOIs/ISBN to the `DESCRIPTION` Description
+  field (Allen et al., 1998, ISBN:9251042195; Abatzoglou, 2013,
+  doi:10.1002/joc.3413; Riley et al., 2016, doi:10.1002/ecs2.1472).
+* Replaced `\dontrun{}` with runnable examples throughout; the only
+  remaining `\dontrun{}` is `extract_and_rename_tifs()`, which requires
+  external zip archives and a zip utility.
+* Functions no longer write to the user's filespace by default:
+  `build_catalog(output = NULL)`, `build_iland_init(out_path = NULL)`, and
+  `extract_plot_metrics(clip_dir = NULL)`. Examples write only to
+  `tempdir()`.
+
 # forestPulse 0.3.0
 
 Major release: the package now spans field/remote-sensing analysis **and**

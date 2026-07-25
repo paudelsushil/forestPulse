@@ -46,26 +46,33 @@ utils::globalVariables(c(
 #'   \code{neighbor} (1..\code{k}), \code{plot_id}, and \code{distance}.
 #'
 #' @examples
-#' \dontrun{
-#' # reference plots: predictors + responses + plot_id
-#' reference <- read.csv("plots_reference.csv")
-#' #   plot_id, elev, slope, aspect, tmean, precip,       <- predictors
-#' #            canopy_ht, forest_cover, veg_group        <- responses
+#' # imputation needs the Suggested packages 'yaImpute' and 'randomForest'
+#' if (requireNamespace("yaImpute", quietly = TRUE) &&
+#'     requireNamespace("randomForest", quietly = TRUE)) {
+#'   set.seed(1)
+#'   predictors <- c("elev", "slope", "tmean")
+#'   responses  <- c("canopy_ht")
 #'
-#' # target rasters (SAME predictors), plus the stand grid
-#' preds  <- terra::rast("predictors.tif")   # layers named as predictors
-#' stands <- terra::rast("gis/stand_grid.tif")
-#' target <- make_target_from_rasters(preds, stands)
+#'   # 20 reference plots with predictors + a response
+#'   reference <- data.frame(
+#'     plot_id   = 1:20,
+#'     elev      = runif(20, 500, 1500),
+#'     slope     = runif(20, 0, 30),
+#'     tmean     = runif(20, 5, 15),
+#'     canopy_ht = runif(20, 10, 35))
 #'
-#' predictors <- c("elev", "slope", "aspect", "tmean", "precip")
-#' responses  <- c("canopy_ht", "forest_cover", "veg_group")
+#'   # 30 target pixels with the SAME predictors
+#'   target <- data.frame(
+#'     pixel_id = 1:30,
+#'     stand_id = rep(1:3, each = 10),
+#'     elev     = runif(30, 500, 1500),
+#'     slope    = runif(30, 0, 30),
+#'     tmean    = runif(30, 5, 15))
 #'
-#' pixel_plot <- impute_plots_to_pixels(reference, target,
-#'                                      predictors, responses, k = 1)
-#'
-#' # tree_lists from the FIA->cohort conversion (previous step), long format
-#' tree_lists <- read.csv("plot_tree_lists.csv")
-#' init <- build_iland_init(pixel_plot, tree_lists, "init/init_trees.txt")
+#'   pixel_plot <- impute_plots_to_pixels(reference, target,
+#'                                        predictors, responses,
+#'                                        k = 1, ntree = 100)
+#'   head(pixel_plot)
 #' }
 #'
 #' @importFrom dplyr %>% filter if_all all_of mutate left_join select bind_cols
@@ -166,18 +173,20 @@ make_target_from_rasters <- function(predictor_stack, stand_grid) {
 #' @param tree_lists Long data frame with columns \code{plot_id},
 #'   \code{species}, \code{dbh_from}, \code{dbh_to}, \code{hd}, and \code{count}
 #'   (count = trees/ha; one row per plot x species x DBH bin).
-#' @param out_path Character scalar. Path of the file to write. Parent
-#'   directories are created if needed. Default \code{"init/init_trees.txt"}.
+#' @param out_path Character scalar or \code{NULL}. Path of the file to write.
+#'   Parent directories are created if needed. When \code{NULL} (default),
+#'   nothing is written and the table is only returned. To write to a file,
+#'   supply a path (e.g. \code{file.path(tempdir(), "init_trees.txt")}).
 #'
-#' @return The stand-level initialization table (also written to
-#'   \code{out_path}), invisibly returned as a data frame.
+#' @return The stand-level initialization table (written to \code{out_path}
+#'   when it is non-\code{NULL}), invisibly returned as a data frame.
 #'
 #' @importFrom dplyr %>% filter first count inner_join group_by summarise
 #'   left_join transmute
 #' @importFrom stats weighted.mean
 #' @export
 build_iland_init <- function(pixel_plot, tree_lists,
-                             out_path = "init/init_trees.txt") {
+                             out_path = NULL) {
 
   # k = 1 only: keep the single best-matching neighbour per pixel
   pixel_plot <- dplyr::filter(pixel_plot, neighbor == dplyr::first(neighbor))

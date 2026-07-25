@@ -156,7 +156,9 @@
 #'   Default \code{NULL} (primary radius only).
 #' @param save_clips Logical. Save clipped binary rasters per plot?
 #'   Default \code{FALSE}.
-#' @param clip_dir Directory for saved clips. Default \code{"gap_clips"}.
+#' @param clip_dir Directory for saved clips, required when
+#'   \code{save_clips = TRUE}. Default \code{NULL} (nothing written). Supply a
+#'   path such as \code{file.path(tempdir(), "gap_clips")} to save clips.
 #'
 #' @return A \code{data.frame} with one row per plot (per radius if
 #'   \code{multi_radius} is used) containing plot ID, radius, and
@@ -197,7 +199,11 @@ extract_plot_metrics <- function(chm,
                                  min_gap_area     = 1,
                                  multi_radius     = NULL,
                                  save_clips       = FALSE,
-                                 clip_dir         = "gap_clips") {
+                                 clip_dir         = NULL) {
+
+  if (isTRUE(save_clips) && is.null(clip_dir)) {
+    stop("`clip_dir` must be supplied when `save_clips = TRUE`.", call. = FALSE)
+  }
 
   # --- load CHM -------------------------------------------------------------
   if (is.character(chm) && length(chm) == 1L) {

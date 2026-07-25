@@ -50,26 +50,33 @@ is performed in chunks so that millions of pixels can be processed without
 exhausting memory.
 }
 \examples{
-\dontrun{
-# reference plots: predictors + responses + plot_id
-reference <- read.csv("plots_reference.csv")
-#   plot_id, elev, slope, aspect, tmean, precip,       <- predictors
-#            canopy_ht, forest_cover, veg_group        <- responses
+# imputation needs the Suggested packages 'yaImpute' and 'randomForest'
+if (requireNamespace("yaImpute", quietly = TRUE) &&
+    requireNamespace("randomForest", quietly = TRUE)) {
+  set.seed(1)
+  predictors <- c("elev", "slope", "tmean")
+  responses  <- c("canopy_ht")
 
-# target rasters (SAME predictors), plus the stand grid
-preds  <- terra::rast("predictors.tif")   # layers named as predictors
-stands <- terra::rast("gis/stand_grid.tif")
-target <- make_target_from_rasters(preds, stands)
+  # 20 reference plots with predictors + a response
+  reference <- data.frame(
+    plot_id   = 1:20,
+    elev      = runif(20, 500, 1500),
+    slope     = runif(20, 0, 30),
+    tmean     = runif(20, 5, 15),
+    canopy_ht = runif(20, 10, 35))
 
-predictors <- c("elev", "slope", "aspect", "tmean", "precip")
-responses  <- c("canopy_ht", "forest_cover", "veg_group")
+  # 30 target pixels with the SAME predictors
+  target <- data.frame(
+    pixel_id = 1:30,
+    stand_id = rep(1:3, each = 10),
+    elev     = runif(30, 500, 1500),
+    slope    = runif(30, 0, 30),
+    tmean    = runif(30, 5, 15))
 
-pixel_plot <- impute_plots_to_pixels(reference, target,
-                                     predictors, responses, k = 1)
-
-# tree_lists from the FIA->cohort conversion (previous step), long format
-tree_lists <- read.csv("plot_tree_lists.csv")
-init <- build_iland_init(pixel_plot, tree_lists, "init/init_trees.txt")
+  pixel_plot <- impute_plots_to_pixels(reference, target,
+                                       predictors, responses,
+                                       k = 1, ntree = 100)
+  head(pixel_plot)
 }
 
 }

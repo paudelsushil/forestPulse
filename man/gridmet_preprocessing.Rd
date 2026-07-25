@@ -50,17 +50,26 @@ harmonized \code{data.table} consumed by \code{\link[=write_iland_climate]{write
 alongside the cluster column.
 }
 \examples{
-\dontrun{
+# small synthetic gridMET daily extraction (two clusters, three days)
+days <- as.Date("2000-01-01") + 0:2
+gridmet_daily <- data.frame(
+  cluster = rep(c("c1", "c2"), each = 3),
+  date    = rep(days, 2),
+  tmmn    = c(272, 273, 274, 271, 272, 273),   # Kelvin
+  tmmx    = c(282, 283, 284, 281, 282, 283),
+  pr      = c(0, 2, 5, 1, 0, 3),
+  srad    = c(120, 140, 160, 110, 130, 150),
+  rmin    = c(35, 40, 45, 30, 35, 40),
+  rmax    = c(90, 92, 95, 88, 90, 93)
+)
+
 clim <- gridmet_preprocessing(
   data        = gridmet_daily,
   cluster_col = "cluster",
   date_col    = "date",
   temp_unit   = "K",
-  vpd_source  = "compute",
-  co2         = data.frame(year = 1979:2020, co2 = co2_ppm))
-write_iland_climate(clim, "database/gridmet.sqlite", split_col = "cluster",
-                     overwrite = TRUE)
-}
+  vpd_source  = "compute")
+head(clim)
 }
 \references{
 Abatzoglou, J.T. (2013). Development of gridded surface meteorological data

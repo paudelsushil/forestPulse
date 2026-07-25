@@ -1,20 +1,24 @@
 Package: forestPulse
 Type: Package
-Title: Analyse Forest Structure and Disturbance from Field and Remote Sensing Data
-Version: 0.3.0
+Title: Analyse Forest Plots and Prepare Inputs for the 'iLand' Model
+Version: 0.3.1
 Authors@R: person(given = "Sushil", family = "Paudel", role = c("aut", "cre"),
     email = "clarkesushil@gmail.com")
-Description: Analyse forest structure and disturbance dynamics from field
-    measurements and remote-sensing imagery, and assemble inputs for forest
-    landscape simulation. Functions index geotagged rasters into a spatial
-    catalog matched to field plots, compute canopy height models and canopy
-    gap geometry, derive RGB vegetation indices, locate trees from compass
-    bearings, and summarise plot-level basal area, crown density, and species
-    composition. Further tools impute field plots to pixels to build
-    wall-to-wall tree lists, derive daily climate variables such as vapour
-    pressure deficit and radiation from 'gridMET' data, and build stand
-    grids, resource-unit environment files, tree-initialisation files, and
-    'SQLite' climate databases for the 'iLand' forest landscape model.
+Description: Turns forest field sample plots and drone or satellite imagery
+    into analysis-ready summaries, and assembles the input files needed by
+    the 'iLand' forest landscape model. For field and image analysis, it
+    summarises plot-level basal area, crown density and species composition,
+    tidies species codes, locates trees from compass bearings and distances,
+    indexes geotagged rasters into a searchable catalogue matched to plots,
+    computes canopy height models and canopy-gap geometry, and derives
+    red-green-blue vegetation indices. For model preparation, it imputes
+    field plots to pixels to build wall-to-wall tree lists using modified
+    random-forest imputation (Riley et al., 2016) <doi:10.1002/ecs2.1472>,
+    derives daily climate variables such as vapour pressure deficit and
+    radiation from 'gridMET' data (Abatzoglou, 2013) <doi:10.1002/joc.3413>
+    following the FAO-56 approach (Allen et al., 1998, ISBN:9251042195), and
+    builds stand grids, resource-unit environment files, tree-initialisation
+    files and 'SQLite' climate databases for 'iLand'.
 License: MIT + file LICENSE
 URL: https://github.com/paudelsushil/forestPulse
 BugReports: https://github.com/paudelsushil/forestPulse/issues

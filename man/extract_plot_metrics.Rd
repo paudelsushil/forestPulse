@@ -17,7 +17,7 @@ extract_plot_metrics(
   min_gap_area = 1,
   multi_radius = NULL,
   save_clips = FALSE,
-  clip_dir = "gap_clips"
+  clip_dir = NULL
 )
 }
 \arguments{
@@ -51,7 +51,9 @@ Default \code{NULL} (primary radius only).}
 \item{save_clips}{Logical. Save clipped binary rasters per plot?
 Default \code{FALSE}.}
 
-\item{clip_dir}{Directory for saved clips. Default \code{"gap_clips"}.}
+\item{clip_dir}{Directory for saved clips, required when
+\code{save_clips = TRUE}. Default \code{NULL} (nothing written). Supply a
+path such as \code{file.path(tempdir(), "gap_clips")} to save clips.}
 }
 \value{
 A \code{data.frame} with one row per plot (per radius if

@@ -66,6 +66,7 @@
 ^R/daily2Monthly_pet\.R$
 ^R/package_logo\.R$
 ^package_logo\.R$
+^CRAN_FIXES_LOG\.md$
 ^git_protocol\.ps1$
 ^dev\.ps1$
 ^dev\.cmd$
