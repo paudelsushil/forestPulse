@@ -28,14 +28,26 @@
 #'   and any requested \code{attr_cols}.
 #'
 #' @examples
-#' \dontrun{
+#' # two square polygons with an area column and attributes to carry over
+#' sq <- function(x0, y0, s) {
+#'   sf::st_polygon(list(rbind(
+#'     c(x0, y0), c(x0 + s, y0), c(x0 + s, y0 + s),
+#'     c(x0, y0 + s), c(x0, y0))))
+#' }
+#' polygons <- sf::st_sf(
+#'   event_id   = c("A", "B"),
+#'   event_date = as.Date(c("2020-06-01", "2020-06-02")),
+#'   area_ha    = c(100, 400),
+#'   geometry   = sf::st_sfc(sq(0, 0, 10), sq(20, 0, 20))
+#' )
+#'
 #' pts <- create_samples(
 #'   feature   = polygons,
 #'   area_col  = "area_ha",
 #'   type      = "random",
 #'   attr_cols = c("event_id", "event_date")
 #' )
-#' }
+#' head(pts)
 #'
 #' @importFrom sf st_is_empty st_is_valid st_sample st_sf st_as_sf
 #' @export

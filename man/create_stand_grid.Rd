@@ -48,9 +48,21 @@ Rasterizes stand polygons to the iLand stand grid, encoding forested
 stands (integer IDs > 0), forested-outside cells, and non-forested cells.
 }
 \examples{
-\dontrun{
-stands <- sf::st_read("gis/stands.shp")
-g <- create_stand_grid(stands, id_field = "stand_id",
-                       filename = "gis/stand_grid.asc")
+# two stand polygons with integer IDs
+sq <- function(x0, y0, s, id) {
+  sf::st_sf(stand_id = id,
+            geometry = sf::st_sfc(sf::st_polygon(list(rbind(
+              c(x0, y0), c(x0 + s, y0), c(x0 + s, y0 + s),
+              c(x0, y0 + s), c(x0, y0))))))
 }
+stands <- rbind(sq(0, 0, 50, 1L), sq(50, 0, 50, 2L))
+
+# in-memory grid (no file written)
+g <- create_stand_grid(stands, id_field = "stand_id", resolution = 10)
+
+# write to a temporary file
+f <- tempfile(fileext = ".asc")
+create_stand_grid(stands, id_field = "stand_id", filename = f,
+                  overwrite = TRUE)
+file.remove(f)
 }

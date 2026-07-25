@@ -4,7 +4,7 @@
 \alias{build_iland_init}
 \title{Assemble an iLand Stand Initialization File}
 \usage{
-build_iland_init(pixel_plot, tree_lists, out_path = "init/init_trees.txt")
+build_iland_init(pixel_plot, tree_lists, out_path = NULL)
 }
 \arguments{
 \item{pixel_plot}{Output of \code{\link{impute_plots_to_pixels}} (use
@@ -14,12 +14,14 @@ build_iland_init(pixel_plot, tree_lists, out_path = "init/init_trees.txt")
 \code{species}, \code{dbh_from}, \code{dbh_to}, \code{hd}, and \code{count}
 (count = trees/ha; one row per plot x species x DBH bin).}
 
-\item{out_path}{Character scalar. Path of the file to write. Parent
-directories are created if needed. Default \code{"init/init_trees.txt"}.}
+\item{out_path}{Character scalar or \code{NULL}. Path of the file to write.
+Parent directories are created if needed. When \code{NULL} (default),
+nothing is written and the table is only returned. To write to a file,
+supply a path (e.g. \code{file.path(tempdir(), "init_trees.txt")}).}
 }
 \value{
-The stand-level initialization table (also written to
-\code{out_path}), invisibly returned as a data frame.
+The stand-level initialization table (written to \code{out_path}
+when it is non-\code{NULL}), invisibly returned as a data frame.
 }
 \description{
 Builds a stand-level tree-list initialization file for iLand. Each pixel

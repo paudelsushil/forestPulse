@@ -20,9 +20,21 @@
 #'   containing the extracted values (\code{NA} where no match was found).
 #'
 #' @examples
-#' \dontrun{
-#' pts <- extractValue2Points(plots, "rasters/ndvi.tif", variable = "ndvi")
-#' }
+#' # write a small single-layer raster to a temporary file
+#' set.seed(1)
+#' r <- terra::rast(nrows = 10, ncols = 10, xmin = 0, xmax = 10,
+#'                  ymin = 0, ymax = 10, crs = "EPSG:4326",
+#'                  vals = runif(100))
+#' tif <- tempfile(fileext = ".tif")
+#' terra::writeRaster(r, tif)
+#'
+#' # sample points within the raster extent
+#' plots <- sf::st_as_sf(
+#'   data.frame(id = 1:3, x = c(2, 5, 8), y = c(3, 5, 7)),
+#'   coords = c("x", "y"), crs = "EPSG:4326")
+#'
+#' plots <- extractValue2Points(plots, tif, variable = "ndvi")
+#' file.remove(tif)
 #'
 #' @importFrom sf st_read st_transform st_crs st_coordinates
 #' @importFrom terra rast extract has.time nlyr

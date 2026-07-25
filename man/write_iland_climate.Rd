@@ -80,14 +80,18 @@ sorted chronologically within each table. All tables are written inside a
 single database transaction.
 }
 \examples{
-\dontrun{
-# one cluster, written to a historical-scenario database
-write_iland_climate(clim_df, "database/historic.sqlite",
-                     table_name = "climate1")
+# RSQLite (Suggests) is needed to write the database
+if (requireNamespace("RSQLite", quietly = TRUE)) {
+  clim_df <- data.frame(
+    year = 2001L, month = rep(1:2, each = 2), day = 1:2,
+    min_temp = c(-2, -1, 0, 1), max_temp = c(4, 5, 6, 7),
+    prec = c(0, 3, 1, 2), rad = c(7, 8, 9, 10),
+    vpd = c(0.2, 0.3, 0.4, 0.5))
 
-# several clusters at once
-write_iland_climate(list(climate1 = df1, climate2 = df2),
-                     "database/rcp85.sqlite", overwrite = TRUE)
+  # write to a temporary database (never the user's home/working directory)
+  db <- tempfile(fileext = ".sqlite")
+  write_iland_climate(clim_df, db, table_name = "climate1")
+  file.remove(db)
 }
 
 }

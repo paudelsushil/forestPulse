@@ -31,10 +31,13 @@ writes it to one output directory. Errors on individual zips are caught and
 reported as warnings so the batch continues.
 }
 \examples{
+# Not run: operates on external .zip archives produced by drone
+# photogrammetry software (e.g. OpenDroneMap) and relies on an external
+# zip/unzip utility, so it cannot be executed in a self-contained example.
 \dontrun{
 extract_and_rename_tifs(
   zip_dir    = "data/zips",
-  output_dir = "data/orthophotos"
+  output_dir = file.path(tempdir(), "orthophotos")
 )
 }
 

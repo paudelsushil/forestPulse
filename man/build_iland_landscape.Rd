@@ -34,12 +34,25 @@ the individual functions standalone is equally supported; this wrapper only
 chains them and validates the result.
 }
 \examples{
-\dontrun{
-cfg <- list(
-  outdir     = "project",
-  stand_grid = list(polygons = stands, id_field = "stand_id"),
-  init       = list(trees = cohorts)
-)
-res <- build_iland_landscape(cfg, steps = c("stand_grid", "init"))
+# stand polygons
+sq <- function(x0, y0, s, id) {
+  sf::st_sf(stand_id = id,
+            geometry = sf::st_sfc(sf::st_polygon(list(rbind(
+              c(x0, y0), c(x0 + s, y0), c(x0 + s, y0 + s),
+              c(x0, y0 + s), c(x0, y0))))))
 }
+stands <- rbind(sq(0, 0, 50, 1L), sq(50, 0, 50, 2L))
+
+# ready-made cohorts for the init step
+cohorts <- data.frame(
+  count = c(120, 80), species = c("piab", "fasy"),
+  dbh_from = c(10, 20), dbh_to = c(15, 25),
+  hd = c(80, 75), stand_id = c(1L, 2L))
+
+# in-memory build (outdir omitted, so no files are written)
+res <- build_iland_landscape(
+  list(stand_grid = list(polygons = stands, id_field = "stand_id"),
+       init       = list(trees = cohorts)),
+  steps = c("stand_grid", "init"))
+names(res)
 }

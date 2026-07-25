@@ -88,11 +88,23 @@ utils::globalVariables(c(
 #'
 #' @return A `terra::SpatRaster` (returned invisibly when a file is written).
 #' @examples
-#' \dontrun{
-#' stands <- sf::st_read("gis/stands.shp")
-#' g <- create_stand_grid(stands, id_field = "stand_id",
-#'                        filename = "gis/stand_grid.asc")
+#' # two stand polygons with integer IDs
+#' sq <- function(x0, y0, s, id) {
+#'   sf::st_sf(stand_id = id,
+#'             geometry = sf::st_sfc(sf::st_polygon(list(rbind(
+#'               c(x0, y0), c(x0 + s, y0), c(x0 + s, y0 + s),
+#'               c(x0, y0 + s), c(x0, y0))))))
 #' }
+#' stands <- rbind(sq(0, 0, 50, 1L), sq(50, 0, 50, 2L))
+#'
+#' # in-memory grid (no file written)
+#' g <- create_stand_grid(stands, id_field = "stand_id", resolution = 10)
+#'
+#' # write to a temporary file
+#' f <- tempfile(fileext = ".asc")
+#' create_stand_grid(stands, id_field = "stand_id", filename = f,
+#'                   overwrite = TRUE)
+#' file.remove(f)
 #' @export
 create_stand_grid <- function(polygons, id_field,
                               resolution = 10,
@@ -455,14 +467,27 @@ validate_landscape <- function(init = NULL, stand_grid = NULL,
 #'
 #' @return A named list of the created objects, plus `$validation`.
 #' @examples
-#' \dontrun{
-#' cfg <- list(
-#'   outdir     = "project",
-#'   stand_grid = list(polygons = stands, id_field = "stand_id"),
-#'   init       = list(trees = cohorts)
-#' )
-#' res <- build_iland_landscape(cfg, steps = c("stand_grid", "init"))
+#' # stand polygons
+#' sq <- function(x0, y0, s, id) {
+#'   sf::st_sf(stand_id = id,
+#'             geometry = sf::st_sfc(sf::st_polygon(list(rbind(
+#'               c(x0, y0), c(x0 + s, y0), c(x0 + s, y0 + s),
+#'               c(x0, y0 + s), c(x0, y0))))))
 #' }
+#' stands <- rbind(sq(0, 0, 50, 1L), sq(50, 0, 50, 2L))
+#'
+#' # ready-made cohorts for the init step
+#' cohorts <- data.frame(
+#'   count = c(120, 80), species = c("piab", "fasy"),
+#'   dbh_from = c(10, 20), dbh_to = c(15, 25),
+#'   hd = c(80, 75), stand_id = c(1L, 2L))
+#'
+#' # in-memory build (outdir omitted, so no files are written)
+#' res <- build_iland_landscape(
+#'   list(stand_grid = list(polygons = stands, id_field = "stand_id"),
+#'        init       = list(trees = cohorts)),
+#'   steps = c("stand_grid", "init"))
+#' names(res)
 #' @export
 build_iland_landscape <- function(config,
                                   steps = intersect(

@@ -173,17 +173,26 @@ convert_radiation <- function(x, from = "W/m2", to = "MJ/m2/day") {
 #'   for ecological applications and modelling. International Journal of
 #'   Climatology, 33(1), 121-131. (gridMET / METDATA)
 #' @examples
-#' \dontrun{
+#' # small synthetic gridMET daily extraction (two clusters, three days)
+#' days <- as.Date("2000-01-01") + 0:2
+#' gridmet_daily <- data.frame(
+#'   cluster = rep(c("c1", "c2"), each = 3),
+#'   date    = rep(days, 2),
+#'   tmmn    = c(272, 273, 274, 271, 272, 273),   # Kelvin
+#'   tmmx    = c(282, 283, 284, 281, 282, 283),
+#'   pr      = c(0, 2, 5, 1, 0, 3),
+#'   srad    = c(120, 140, 160, 110, 130, 150),
+#'   rmin    = c(35, 40, 45, 30, 35, 40),
+#'   rmax    = c(90, 92, 95, 88, 90, 93)
+#' )
+#'
 #' clim <- gridmet_preprocessing(
 #'   data        = gridmet_daily,
 #'   cluster_col = "cluster",
 #'   date_col    = "date",
 #'   temp_unit   = "K",
-#'   vpd_source  = "compute",
-#'   co2         = data.frame(year = 1979:2020, co2 = co2_ppm))
-#' write_iland_climate(clim, "database/gridmet.sqlite", split_col = "cluster",
-#'                      overwrite = TRUE)
-#' }
+#'   vpd_source  = "compute")
+#' head(clim)
 #' @importFrom data.table as.data.table data.table set setnames setorderv
 #' @export
 gridmet_preprocessing <- function(data,
@@ -313,14 +322,18 @@ gridmet_preprocessing <- function(data,
 #' single database transaction.
 #'
 #' @examples
-#' \dontrun{
-#' # one cluster, written to a historical-scenario database
-#' write_iland_climate(clim_df, "database/historic.sqlite",
-#'                      table_name = "climate1")
+#' # RSQLite (Suggests) is needed to write the database
+#' if (requireNamespace("RSQLite", quietly = TRUE)) {
+#'   clim_df <- data.frame(
+#'     year = 2001L, month = rep(1:2, each = 2), day = 1:2,
+#'     min_temp = c(-2, -1, 0, 1), max_temp = c(4, 5, 6, 7),
+#'     prec = c(0, 3, 1, 2), rad = c(7, 8, 9, 10),
+#'     vpd = c(0.2, 0.3, 0.4, 0.5))
 #'
-#' # several clusters at once
-#' write_iland_climate(list(climate1 = df1, climate2 = df2),
-#'                      "database/rcp85.sqlite", overwrite = TRUE)
+#'   # write to a temporary database (never the user's home/working directory)
+#'   db <- tempfile(fileext = ".sqlite")
+#'   write_iland_climate(clim_df, db, table_name = "climate1")
+#'   file.remove(db)
 #' }
 #'
 #' @importFrom DBI dbConnect dbDisconnect dbExistsTable dbRemoveTable dbWriteTable

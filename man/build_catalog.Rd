@@ -6,7 +6,7 @@
 \usage{
 build_catalog(
   input,
-  output = "catalog.geojson",
+  output = NULL,
   target_crs = "EPSG:4326",
   recursive = TRUE,
   overwrite = FALSE,
@@ -16,7 +16,9 @@ build_catalog(
 \arguments{
 \item{input}{Directory path or vector of file paths.}
 
-\item{output}{Output GeoJSON path. Defaults to \code{"catalog.geojson"}.}
+\item{output}{Output GeoJSON path, or \code{NULL} (default) to return the
+catalog without writing any file. To save the catalog, supply a path
+(e.g. \code{file.path(tempdir(), "catalog.geojson")}).}
 
 \item{target_crs}{Catalog CRS. Defaults to \code{"EPSG:4326"}.}
 
@@ -27,7 +29,8 @@ build_catalog(
 \item{quiet}{Suppress messages? Default \code{FALSE}.}
 }
 \value{
-An \code{sf} object (invisibly). GeoJSON written as side effect.
+An \code{sf} object (invisibly). When \code{output} is non-\code{NULL},
+a GeoJSON file is written as a side effect.
 }
 \description{
 Build a Spatial Catalog from Geotagged Rasters
